@@ -41,6 +41,8 @@ model Service {
   priceCents  Int // Full price of style in cents
   durationMin Int // Service time block in minutes
   hairBundles Int? // fixed bundle count for hair add-ons (e.g. Bora Bora = 4); null = client chooses
+  category    String    @default("other") // tab on the style menu (see src/content/styles.ts)
+  popular     Boolean   @default(false) // shown in "Popular Styles" on the home page
   active      Boolean   @default(true)
   sortOrder   Int       @default(0)
   bookings    Booking[]

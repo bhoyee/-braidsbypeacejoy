@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { categoryLabel } from "@/lib/catalog";
 import type { PublicService } from "@/lib/services";
 import { formatDuration, formatUSD } from "@/lib/time";
 import { ArrowRightIcon, ClockIcon, CrownIcon } from "./icons";
@@ -28,6 +29,9 @@ export function ServiceCard({ service, index = 0 }: { service: PublicService; in
         <div className="absolute inset-0 bg-gradient-to-t from-navy-950/85 via-navy-950/10 to-transparent" />
         <span className="absolute left-4 top-4 rounded-full bg-gold-400 px-3 py-1 text-xs font-bold text-navy-950 shadow">
           {formatUSD(service.priceCents)}
+        </span>
+        <span className="absolute right-4 top-4 rounded-full bg-navy-950/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur">
+          {categoryLabel(service.category)}
         </span>
         <h3 className="absolute inset-x-4 bottom-4 font-display text-2xl font-semibold leading-tight text-white">{service.name}</h3>
       </div>

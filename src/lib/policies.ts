@@ -4,12 +4,6 @@ import { SALON } from "./config";
 
 export const CANCEL_NOTICE_HOURS = 72;
 
-export const ABOUT_PEACE_JOY = [
-  "Hey love, I'm Peace Joy. Braiding is in my roots. It's how we connect, protect, and celebrate our beauty. I'm here to carry that tradition with care and creativity.",
-  "At Braids by Peace Joy, it's more than a style. It's a peaceful space where you can relax, feel seen, and leave feeling like the best version of you. Whether it's knotless, twists, or a fresh cleanse, I got you.",
-  "There is love in every braid. Welcome in.",
-];
-
 /** "Before your appointment" checklist — short lines for the home page and emails. */
 export const PREP_CHECKLIST = [
   { title: "Wash & blow-dry", body: "Please arrive with your hair washed and blow-dried." },

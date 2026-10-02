@@ -69,6 +69,10 @@ That's it.
 
 **Deploying.** Push to `main`. Watch progress under **Actions** on GitHub. Changes are live in about 3–5 minutes.
 
+**Adding or changing styles.** Edit **`src/content/styles.ts`**: one entry per style. Each entry has a name, category, price, time, photo, and a `popular` flag that decides whether it shows on the home page (keep about 8 there). To hide a style, set `hidden: true`. Push, and the deploy syncs the list into the database. Styles are never deleted, so past bookings keep their style.
+
+**Adding or changing FAQs.** Edit **`src/content/faqs.ts`**: one entry per question, each with a topic (the tab it appears under), the answer, an optional "read more" link, and a `home` flag for the ~5 questions shown on the home page. Push to publish.
+
 **Changing the database.** Edit `prisma/schema.prisma`, then on your computer run:
 
 ```bash
@@ -95,7 +99,7 @@ All commands below run in cPanel → **Terminal**.
 | Redeploy the latest build | `rm -f ~/bbpj-deploy/state/deployed ~/bbpj-deploy/state/failed`, then wait 2 minutes (or run `bash ~/bbpj-deploy/src/deploy/server-deploy.sh`). |
 | Undo a bad release | `git revert <commit>` and push. Database migrations are **not** undone automatically. |
 | Site shows an error page | cPanel → *Setup Node.js App* → `bbpj-api` → **Restart**, and check its log file. |
-| Reload the starter style menu | `cd ~/bbpj-api && source ~/nodevenv/bbpj-api/22/bin/activate && npm run db:seed`. ⚠️ This overwrites the prices of the starter styles. |
+| Re-sync the style menu by hand | `cd ~/bbpj-api && source ~/nodevenv/bbpj-api/22/bin/activate && npm run db:seed`. This also runs on every deploy. |
 | Change a setting (email, Stripe, …) | `nano ~/bbpj-api/.env`, then restart the app (row above). |
 
 ## Optional later: faster pages in the US

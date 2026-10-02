@@ -1,33 +1,41 @@
-// Seed the style menu. Prices/durations are placeholders — edit to match the
-// real Braidsbypeacejoy price list, then run: npm run db:seed
+// Sync the style menu from src/content/styles.ts into the database.
+// Runs automatically on every deploy (deploy/server-deploy.sh) and via `npm run db:seed`.
+//
+// • New styles are added, existing ones (matched by slug) are updated.
+// • Styles removed from the list (or marked hidden) are hidden, never deleted,
+//   so past bookings keep their style.
 import { PrismaClient } from "@prisma/client";
+import { STYLES } from "../src/content/styles";
 
 // Keep Prisma's engine within shared-hosting thread limits (see src/lib/prisma.ts).
 process.env.TOKIO_WORKER_THREADS ??= "2";
 const prisma = new PrismaClient();
 
-const services = [
-  { slug: "small-knotless", name: "Small Knotless Braids", priceCents: 35000, durationMin: 360, description: "Featherlight, ultra-neat knotless parts for a long-lasting, refined finish." },
-  { slug: "medium-knotless", name: "Medium Knotless Braids", priceCents: 25000, durationMin: 300, imageUrl: "/assets/pix3.jpeg", description: "The signature everyday luxury braid — painless roots, flawless parts." },
-  { slug: "large-knotless", name: "Large Knotless Braids", priceCents: 20000, durationMin: 240, description: "Bold, lightweight statement braids installed with tension-free roots." },
-  { slug: "boho-knotless", name: "Boho Knotless Braids", priceCents: 30000, durationMin: 330, description: "Knotless braids with soft human-hair curls for an effortless goddess look." },
-  { slug: "boho-locs", name: "Boho Locs", priceCents: 28000, durationMin: 300, description: "Distressed faux locs woven with curly accents for a romantic boho texture." },
-  { slug: "bora-bora-braids", name: "Bora Bora Braids", priceCents: 30000, durationMin: 360, hairBundles: 4, description: "Knotless braids with full, flowing curls throughout — uses 4 bundles of hair." },
-  { slug: "mermaid-braids", name: "Mermaid Braids", priceCents: 28000, durationMin: 330, hairBundles: 3, description: "Braids with soft, wavy mermaid curls left out for a romantic finish — uses 3 bundles of hair." },
-  { slug: "fulani-braids", name: "Fulani Braids", priceCents: 22000, durationMin: 240, imageUrl: "/assets/pix1.jpeg", description: "Iconic cornrow-and-braid pattern with optional beads and cuffs." },
-  { slug: "stitch-braids", name: "Stitch Feed-In Braids", priceCents: 12000, durationMin: 150, description: "Crisp stitched cornrows with a sleek, sculpted finish." },
-  { slug: "kids-braids", name: "Kids Braids (12 & under)", priceCents: 15000, durationMin: 180, description: "Gentle, protective styles designed for little ones." },
-];
-
 async function main() {
-  for (const [i, s] of services.entries()) {
-    await prisma.service.upsert({
-      where: { slug: s.slug },
-      update: { ...s, sortOrder: i },
-      create: { ...s, sortOrder: i },
-    });
+  const slugs = new Set<string>();
+  for (const [i, s] of STYLES.entries()) {
+    if (slugs.has(s.slug)) throw new Error(`Duplicate style slug "${s.slug}" in src/content/styles.ts`);
+    slugs.add(s.slug);
+    const data = {
+      name: s.name,
+      category: s.category,
+      priceCents: s.priceCents,
+      durationMin: s.durationMin,
+      description: s.description ?? null,
+      imageUrl: s.imageUrl ?? null,
+      hairBundles: s.hairBundles ?? null,
+      popular: s.popular ?? false,
+      active: !s.hidden,
+      sortOrder: i,
+    };
+    await prisma.service.upsert({ where: { slug: s.slug }, update: data, create: { slug: s.slug, ...data } });
   }
-  console.log(`Seeded ${services.length} services.`);
+  const hidden = await prisma.service.updateMany({
+    where: { slug: { notIn: [...slugs] }, active: true },
+    data: { active: false, popular: false },
+  });
+  const shown = STYLES.filter((s) => !s.hidden).length;
+  console.log(`Style menu synced: ${shown} shown${hidden.count ? `, ${hidden.count} no longer listed (hidden)` : ""}.`);
 }
 
 main()

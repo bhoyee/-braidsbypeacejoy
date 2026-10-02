@@ -119,12 +119,11 @@ STEP="applying database migrations"
 log "🗄️  Applying database migrations…"
 npx --no-install prisma migrate deploy
 
-if [ ! -f "$STATE/seeded" ]; then
-  STEP="seeding the style menu (first deploy only)"
-  log "🌱 First deploy: seeding the style menu…"
-  npm run --silent db:seed
-  touch "$STATE/seeded"
-fi
+# The style menu lives in src/content/styles.ts; keep the database in step with it.
+STEP="syncing the style menu"
+sync_dir "$SRC/src" "$APP_DIR/src"
+log "🌿 Syncing the style menu…"
+npm run --silent db:seed
 
 # ── 5. Swap in the new build ────────────────────────────────────────────────
 STEP="copying the new build"

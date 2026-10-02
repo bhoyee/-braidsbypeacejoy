@@ -69,6 +69,7 @@ jobs:
           # Point server-external packages (Prisma) at the server's own node_modules.
           node deploy/link-next-externals.mjs release/.next
           cp -a public prisma deploy release/
+          mkdir -p release/src && cp -a src/content release/src/   # style menu, synced on deploy
           cp package.json package-lock.json server.js next.config.mjs release/
           echo "${GITHUB_SHA}" > release/DEPLOY_VERSION
           du -sh release

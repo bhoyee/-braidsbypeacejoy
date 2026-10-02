@@ -81,7 +81,8 @@ export function SiteFooter() {
             <Link href="/policies" className="py-1 hover:text-gold-300">Booking Policies</Link>
             <Link href="/terms" className="py-1 hover:text-gold-300">Terms &amp; Conditions</Link>
             <Link href="/privacy" className="py-1 hover:text-gold-300">Privacy Policy</Link>
-            <Link href="/#faq" className="py-1 hover:text-gold-300">FAQ</Link>
+            <Link href="/faq" className="py-1 hover:text-gold-300">FAQ</Link>
+            <Link href="/styles" className="py-1 hover:text-gold-300">Style Menu</Link>
           </nav>
         </div>
       </div>

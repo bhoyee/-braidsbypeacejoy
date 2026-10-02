@@ -9,7 +9,7 @@ import { ArrowRightIcon, ClockIcon, CloseIcon, MenuIcon, PhoneIcon, PinIcon } fr
 import { Logo } from "./Logo";
 
 const NAV = [
-  { href: "/#styles", label: "Style Menu" },
+  { href: "/styles", label: "Style Menu" },
   { href: "/#work", label: "Our Work" },
   { href: "/#experience", label: "Experience" },
   { href: "/#visit", label: "Visit" },

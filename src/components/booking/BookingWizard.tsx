@@ -9,6 +9,7 @@ import { addDaysToKey, formatDuration, formatSalonDate, formatSalonTime, formatU
 import { CardIcon, CheckIcon, ClockIcon, ShieldIcon } from "../icons";
 import { Calendar } from "./Calendar";
 import { StyleCustomizer } from "./StyleCustomizer";
+import { StylePicker } from "./StylePicker";
 import { TimeSlots } from "./TimeSlots";
 
 const STEPS = ["Style", "Date & Time", "Your Details", "Deposit"] as const;
@@ -186,37 +187,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
         <section>
           <h2 className="mb-6 font-display text-3xl font-bold text-navy-900">Select your style</h2>
           {services.length === 0 && <p className="text-navy-900/60">No styles are available right now — please check back soon.</p>}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => chooseService(s.id)}
-                className={`group rounded-2xl bg-white p-5 text-left ring-2 transition hover:-translate-y-0.5 hover:shadow-xl ${
-                  s.id === serviceId ? "ring-gold-400" : "ring-transparent hover:ring-royal-700/30"
-                }`}
-              >
-                <p className="font-display text-xl font-semibold text-navy-900">{s.name}</p>
-                <p className="mt-2 flex items-center gap-3 text-sm text-navy-900/60">
-                  <span className="font-bold text-royal-700">{formatUSD(s.priceCents)}</span>
-                  <span className="flex items-center gap-1"><ClockIcon width={14} height={14} /> {formatDuration(s.durationMin)}</span>
-                </p>
-                <span
-                  className={`mt-4 inline-flex items-center gap-1 rounded-full px-4 py-2 text-xs font-semibold ${
-                    s.id === serviceId ? "bg-gold-400 text-navy-950" : "bg-royal-700 text-white group-hover:bg-gold-400 group-hover:text-navy-950"
-                  }`}
-                >
-                  {s.id === serviceId ? (
-                    <>
-                      <CheckIcon width={14} height={14} /> Selected
-                    </>
-                  ) : (
-                    "Select & Book Slot"
-                  )}
-                </span>
-              </button>
-            ))}
-          </div>
+          <StylePicker services={services} selectedId={serviceId} onSelect={chooseService} />
           <div ref={customizeRef} className="scroll-mt-48">
             {service && (
               <StyleCustomizer service={service} value={addOns} quote={quote} onChange={setAddOns} onContinue={() => setStep(1)} />

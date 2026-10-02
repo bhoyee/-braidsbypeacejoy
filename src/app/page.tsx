@@ -16,7 +16,8 @@ import {
   SparkleIcon,
 } from "@/components/icons";
 import { SALON } from "@/lib/config";
-import { ABOUT_PEACE_JOY, PREP_CHECKLIST } from "@/lib/policies";
+import { categoryTabs, popularStyles, stylesHref } from "@/lib/catalog";
+import { PREP_CHECKLIST } from "@/lib/policies";
 import { buildHomeJsonLd } from "@/lib/seo";
 import { getServices } from "@/lib/services";
 
@@ -108,24 +109,56 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ───────────────────────── STYLE MENU ───────────────────────── */}
+      {/* ───────────────────────── POPULAR STYLES ───────────────────────── */}
       <section id="styles" className="scroll-mt-28 bg-cream py-24">
         <div className="mx-auto max-w-7xl px-4">
-          <div className="mx-auto mb-14 max-w-2xl text-center">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-royal-700">The Style Menu</p>
-            <h2 className="mt-3 font-display text-4xl font-bold text-navy-900 sm:text-5xl">Choose Your Crown</h2>
+            <h2 className="mt-3 font-display text-4xl font-bold text-navy-900 sm:text-5xl">Popular Styles</h2>
             <div className="gold-rule mx-auto mt-6 w-40" />
             <p className="mt-6 text-navy-900/70">
-              Transparent pricing — the full price and appointment time for every style, upfront. Choose yours and book in minutes.
+              Our most-booked looks, with the full price and appointment time upfront. Browse every style by category on the full menu.
             </p>
           </div>
 
-          {services.length ? (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-              {services.map((s, i) => (
-                <ServiceCard key={s.id} service={s} index={i} />
-              ))}
+          {/* Quick links into each category of the full menu */}
+          {services.length > 0 && (
+            <div className="-mx-4 mb-10 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <ul className="mx-auto flex w-max gap-2">
+                {categoryTabs(services).slice(1).map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      href={stylesHref({ category: c.id })}
+                      className="block whitespace-nowrap rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-navy-900 ring-1 ring-navy-900/10 transition hover:bg-royal-700 hover:text-white"
+                    >
+                      {c.label} <span className="text-navy-900/40">· {c.count}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
+          )}
+
+          {services.length ? (
+            <>
+              {/* Phones & tablets: one swipeable row. Desktop: 2 rows of 4. */}
+              <div className="-mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-4 [scrollbar-width:none] lg:mx-0 lg:grid lg:snap-none lg:grid-cols-4 lg:gap-8 lg:overflow-visible lg:px-0 lg:pb-0 [&::-webkit-scrollbar]:hidden">
+                {popularStyles(services).map((s, i) => (
+                  <div key={s.id} className="w-[78%] max-w-[320px] shrink-0 snap-start sm:w-[45%] lg:w-auto lg:max-w-none">
+                    <ServiceCard service={s} index={i} />
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-center text-xs text-navy-900/50 lg:hidden">Swipe to see more →</p>
+              <div className="mt-10 text-center">
+                <Link
+                  href="/styles"
+                  className="inline-flex items-center gap-2 rounded-full bg-royal-700 px-8 py-4 font-semibold text-white shadow-lg shadow-royal-700/30 transition hover:bg-navy-900"
+                >
+                  View all {services.length} styles <ArrowRightIcon width={18} height={18} />
+                </Link>
+              </div>
+            </>
           ) : (
             <p className="rounded-2xl bg-white p-10 text-center text-navy-900/70 shadow">
               Our style menu is being refreshed. Please check back shortly or{" "}
@@ -199,41 +232,6 @@ export default async function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-t from-navy-950/80 via-transparent to-transparent" />
               <figcaption className="absolute inset-x-5 bottom-5 font-display text-xl text-white">Your chair is ready</figcaption>
             </figure>
-          </div>
-        </div>
-      </section>
-
-      {/* ───────────────────────── MEET YOUR BRAIDER ───────────────────────── */}
-      <section id="about" className="scroll-mt-28 overflow-hidden bg-cream py-20 sm:py-24" aria-labelledby="about-heading">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
-          <div className="relative mx-auto w-full max-w-sm">
-            <div className="absolute -inset-3 -rotate-3 rounded-[2.25rem] bg-gold-400/80" aria-hidden="true" />
-            <div className="relative aspect-[9/16] overflow-hidden rounded-[2rem] border-4 border-white shadow-2xl">
-              <Image
-                src="/assets/hero-poster.jpg"
-                alt="A happy client showing off her fresh braids in the Braids by Peace Joy suite"
-                fill
-                sizes="(min-width:1024px) 380px, 90vw"
-                className="object-cover"
-              />
-            </div>
-            <p className="absolute -bottom-5 left-1/2 w-max -translate-x-1/2 rounded-full bg-navy-900 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-gold-300 shadow-xl">
-              Love in every braid
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-royal-700">Meet your braider</p>
-            <h2 id="about-heading" className="mt-3 font-display text-4xl font-bold text-navy-900 sm:text-5xl">
-              Hey love, I&apos;m <span className="italic text-royal-700">Peace Joy.</span>
-            </h2>
-            <div className="gold-rule mt-6 w-40" />
-            <div className="mt-8 space-y-5 text-lg leading-relaxed text-navy-900/80">
-              {ABOUT_PEACE_JOY.slice(0, 2).map((para) => (
-                <p key={para}>{para.replace(/^Hey love, I'm Peace Joy\. /, "")}</p>
-              ))}
-            </div>
-            <p className="mt-8 font-display text-2xl italic text-royal-700">{ABOUT_PEACE_JOY[2]}</p>
-            <p className="mt-2 text-sm font-semibold uppercase tracking-[0.3em] text-gold-600">— Peace Joy</p>
           </div>
         </div>
       </section>

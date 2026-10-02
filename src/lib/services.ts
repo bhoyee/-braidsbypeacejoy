@@ -9,6 +9,8 @@ export type PublicService = {
   priceCents: number;
   durationMin: number;
   hairBundles: number | null;
+  category: string;
+  popular: boolean;
 };
 
 /** Read the active style menu straight from MySQL. Used by the API host. */
@@ -26,6 +28,8 @@ export async function listServicesFromDb(): Promise<PublicService[]> {
       priceCents: true,
       durationMin: true,
       hairBundles: true,
+      category: true,
+      popular: true,
     },
   });
 }

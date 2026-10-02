@@ -1,6 +1,8 @@
-// Single source of truth for SEO / social / AI-search content. The visible FAQ,
-// the JSON-LD structured data and /llms.txt all read from here so they never disagree.
-import { DEPOSIT_CENTS, SALON } from "./config";
+// SEO / social / AI-search content. FAQs live in src/content/faqs.ts and the style
+// menu in src/content/styles.ts; the JSON-LD and /llms.txt are built from them.
+import { FAQS, TOPICS } from "@/content/faqs";
+import { CATEGORIES } from "@/content/styles";
+import { SALON } from "./config";
 import { BOOKING_POLICIES } from "./policies";
 import type { PublicService } from "./services";
 import { formatDuration, formatUSD } from "./time";
@@ -52,53 +54,6 @@ export const BRAND = {
     "Braids by Peace Joy",
   ],
 } as const;
-
-export const FAQS: { q: string; a: string }[] = [
-  {
-    q: "Where is Braids by Peace Joy located?",
-    a: "We're inside PHENIX Salon Suites at 8700 Liberty Rd, Suite 101, Randallstown, MD 21133. Look for our posters in the suite window.",
-  },
-  {
-    q: "What are your opening hours?",
-    a: "We're open 7 days a week, Monday to Sunday, from 8:00 AM to 7:00 PM, by appointment. Every style is scheduled to finish by 7:00 PM.",
-  },
-  {
-    q: "How do I book an appointment?",
-    a: `Book online in a few minutes: choose your style, pick an open date and time, and pay the $30 deposit to lock your slot. You can also call or text ${SALON.phone}.`,
-  },
-  {
-    q: "Is a deposit required, and is it refundable?",
-    a: `Yes. A strict, non-refundable deposit of ${formatUSD(DEPOSIT_CENTS)} USD is required to secure and block your appointment slot, and it counts toward your style's total price. Pay it online by card, Apple Pay or Link when you book, or by Cash App (${SALON.cashApp}) or Zelle (${SALON.zelle}) by texting us. A no call / no show cancels the appointment and forfeits the deposit.`,
-  },
-  {
-    q: "Can I cancel or reschedule my appointment?",
-    a: `Yes — reply to your confirmation email or text ${SALON.phone} at least 72 hours before your appointment. If you cancel less than 72 hours before, you'll need to pay a new deposit to book again.`,
-  },
-  {
-    q: "Is braiding hair included in the price?",
-    a: "Yes, all prices include braiding hair, except passion twists and crochet styles. A mix of two or more colors adds $20, and the final price can change with braid length and size. When you book you can upgrade to 100% human hair ($80 per bundle) or blended hair ($50 per bundle), or bring your own hair.",
-  },
-  {
-    q: "How should I prepare for my appointment?",
-    a: `Arrive with your hair washed and blow-dried, with no oil or product applied. Your hair should be at least 4 inches long. Tell us about any allergy to braiding hair or products, and call or text ${SALON.phone} if you're running late.`,
-  },
-  {
-    q: "How do I pay the rest of my balance?",
-    a: "Pay the remaining balance online at any time on our Pay Balance page using the email you booked with or your booking code, or pay at your appointment.",
-  },
-  {
-    q: "What braiding styles do you offer?",
-    a: `Knotless braids, boho knotless braids, box braids, cornrows, stitch braids, Fulani braids, kinky twists, Senegalese twists, mermaid braids, Bora Bora braids and more. See the style menu for current prices and appointment times.`,
-  },
-  {
-    q: "Do you braid children's hair?",
-    a: "Yes — we braid for adults and kids. Choose a kids style from the menu when booking.",
-  },
-  {
-    q: "What payment methods do you accept?",
-    a: `Online payments are processed securely by Stripe and accept Visa, Mastercard, American Express, Discover, Apple Pay and Link. Deposits can also be sent by Cash App (${SALON.cashApp}) or Zelle (${SALON.zelle}).`,
-  },
-];
 
 const absolute = (path: string) => `${siteUrl()}${path}`;
 
@@ -163,12 +118,6 @@ export function buildHomeJsonLd(services: PublicService[]) {
     },
   };
 
-  const faq = {
-    "@type": "FAQPage",
-    "@id": `${url}/#faq`,
-    mainEntity: FAQS.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-  };
-
   const website = {
     "@type": "WebSite",
     "@id": `${url}/#website`,
@@ -179,17 +128,33 @@ export function buildHomeJsonLd(services: PublicService[]) {
     inLanguage: "en-US",
   };
 
-  return { "@context": "https://schema.org", "@graph": [business, website, faq] };
+  return { "@context": "https://schema.org", "@graph": [business, website] };
+}
+
+/** schema.org FAQPage for /faq (every question in src/content/faqs.ts). */
+export function buildFaqJsonLd() {
+  const url = siteUrl();
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": `${url}/faq#faq`,
+    mainEntity: FAQS.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  };
 }
 
 /** Plain-text summary for AI assistants / LLM crawlers (served at /llms.txt). */
 export function buildLlmsTxt(services: PublicService[]) {
   const url = siteUrl();
+  const line = (s: PublicService) =>
+    `- ${s.name}: ${formatUSD(s.priceCents)} · about ${formatDuration(s.durationMin)}${s.description ? ` — ${s.description}` : ""} (book: ${url}/book?service=${s.slug})`;
   const menu = services.length
-    ? services
-        .map((s) => `- ${s.name}: ${formatUSD(s.priceCents)} · about ${formatDuration(s.durationMin)}${s.description ? ` — ${s.description}` : ""} (book: ${url}/book?service=${s.slug})`)
-        .join("\n")
-    : "- See the live style menu at " + `${url}/#styles`;
+    ? CATEGORIES.filter((c) => services.some((s) => s.category === c.id))
+        .map((c) => `### ${c.label}\n${services.filter((s) => s.category === c.id).map(line).join("\n")}`)
+        .join("\n\n")
+    : `- See the live style menu at ${url}/styles`;
+  const faqText = TOPICS.map(
+    (t) => `### ${t.label}\n${FAQS.filter((f) => f.topic === t.id).map((f) => `**${f.q}**\n${f.a}`).join("\n\n")}`,
+  ).join("\n\n");
 
   const policiesText = BOOKING_POLICIES.map((p) => `### ${p.title}\n${p.points.map((x) => `- ${x}`).join("\n")}`).join("\n\n");
 
@@ -222,10 +187,12 @@ ${menu}
 ${policiesText}
 
 ## Frequently asked questions
-${FAQS.map((f) => `### ${f.q}\n${f.a}`).join("\n\n")}
+${faqText}
 
 ## Pages
-- [Home](${url}/): style menu, gallery, studio tour, location and FAQ
+- [Home](${url}/): popular styles, gallery, studio tour, location
+- [Style menu](${url}/styles): every style by category, with prices
+- [FAQ](${url}/faq): all questions by topic
 - [Book an appointment](${url}/book)
 - [Pay a remaining balance](${url}/pay)
 - [Booking policies](${url}/policies)
