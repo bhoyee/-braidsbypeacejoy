@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { AnchorLink } from "@/components/AnchorLink";
+import { HeroVideo } from "@/components/HeroVideo";
 import { ServiceCard } from "@/components/ServiceCard";
 import { StudioTour } from "@/components/StudioTour";
 import {
@@ -49,80 +51,44 @@ export default async function HomePage() {
     <>
       {/* ───────────────────────── HERO ───────────────────────── */}
       <section className="relative isolate flex min-h-[100svh] items-center overflow-hidden bg-navy-950">
-        {/* Fallback gradient (visible while the video loads) */}
-        <div className="braid-texture absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_top,var(--color-royal-700),var(--color-navy-950)_70%)]" />
-        {/* The source clip is vertical: full-bleed & sharp on phones, soft ambient blur on wide screens. */}
-        <video
-          className="hero-video absolute inset-0 -z-10 h-full w-full object-cover lg:scale-110 lg:opacity-70 lg:blur-2xl"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          poster="/assets/hero-poster.jpg"
-          aria-hidden="true"
-        >
-          <source src="/assets/hero-video.mp4" type="video/mp4" />
-        </video>
-        {/* Dark-blue tinted mask */}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-navy-950/85 via-navy-900/60 to-navy-950/95" />
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_25%,rgb(4_11_38/0.75))]" />
+        {/* Navy backdrop (desktop text side) */}
+        <div className="braid-texture absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_20%_30%,var(--color-royal-700),var(--color-navy-950)_65%)]" />
+        <HeroVideo />
 
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-center gap-12 px-4 pb-28 pt-36">
-          {/* Left floating card — the crisp transformation clip */}
-          <figure className="animate-float hidden w-[230px] shrink-0 -rotate-[5deg] xl:block">
-            <div className="overflow-hidden rounded-[1.75rem] border-4 border-gold-400 shadow-[0_30px_60px_-20px_rgb(0_0_0/0.7)]">
-              <video className="aspect-[9/16] w-full object-cover" autoPlay muted loop playsInline poster="/assets/hero-poster.jpg" aria-hidden="true">
-                <source src="/assets/hero-video.mp4" type="video/mp4" />
-              </video>
-            </div>
-            <figcaption className="mt-4 text-center text-xs font-semibold uppercase tracking-[0.3em] text-gold-300">
-              Real transformations
-            </figcaption>
-          </figure>
+        <div className="mx-auto w-full max-w-7xl px-4 pb-28 pt-36 text-center [text-shadow:0_2px_24px_rgb(0_0_0/0.55)] lg:text-left">
+          <div className="mx-auto max-w-3xl lg:mx-0 lg:max-w-[52%]">
+          <p className="animate-fade-up flex items-center justify-center gap-4 lg:justify-start">
+            <span className="h-px w-8 bg-gradient-to-r from-transparent to-gold-400 sm:w-16 lg:hidden" />
+            <span className="font-display text-2xl font-semibold italic text-gold-300 sm:text-4xl">Braids by Peace Joy</span>
+            <span className="h-px w-8 bg-gradient-to-l from-transparent to-gold-400 sm:w-16" />
+          </p>
+          <h1 className="animate-fade-up mt-5 font-display text-5xl font-bold leading-[1.05] text-white [animation-delay:120ms] sm:text-7xl">
+            Crowned in <span className="text-gradient-gold italic">Artistry.</span>
+          </h1>
+          <p className="animate-fade-up mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/90 [animation-delay:240ms] lg:mx-0">
+            Knotless braids, boho styles, cornrows &amp; twists for adults and kids — sculpted by hand in a private suite in
+            Randallstown, Maryland.
+          </p>
 
-          {/* Centre content */}
-          <div className="max-w-2xl text-center">
-            <p className="animate-fade-up mb-6 inline-flex items-center gap-2 rounded-full border border-gold-400/40 bg-navy-950/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.3em] text-gold-300 backdrop-blur">
-              <CrownIcon width={14} height={14} /> Randallstown · Maryland
-            </p>
-            <h1 className="animate-fade-up font-display text-5xl font-bold leading-[1.05] text-white [animation-delay:120ms] sm:text-7xl">
-              Crowned in <span className="text-gradient-gold italic">Artistry.</span>
-            </h1>
-            <p className="animate-fade-up mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/85 [animation-delay:240ms]">
-              Knotless braids, boho styles, cornrows &amp; twists for adults and kids — sculpted by hand in a private suite
-              devoted entirely to you.
-            </p>
-
-            <div className="animate-fade-up mt-12 flex flex-col items-center gap-6 [animation-delay:360ms]">
-              <Link
-                href="/book"
-                className="animate-glow group relative inline-flex items-center gap-3 rounded-full bg-gold-400 px-9 py-5 text-lg font-bold text-navy-950 transition hover:scale-[1.03] hover:bg-gold-300 sm:text-xl"
-              >
-                Book Your Luxury Transformation
-                <ArrowRightIcon className="transition-transform group-hover:translate-x-1" />
-              </Link>
-              <div className="flex items-center gap-6 text-sm font-medium text-white/80">
-                <Link href="/#styles" className="underline-offset-8 hover:text-gold-300 hover:underline">
-                  Explore the style menu
-                </Link>
-                <span className="h-4 w-px bg-white/25" />
-                <a href={SALON.phoneHref} className="flex items-center gap-2 hover:text-gold-300">
-                  <PhoneIcon width={16} height={16} className="text-gold-400" /> {SALON.phone}
-                </a>
-              </div>
+          <div className="animate-fade-up mt-12 flex flex-col items-center gap-6 [animation-delay:360ms] lg:items-start">
+            <Link
+              href="/book"
+              className="animate-glow group relative inline-flex items-center gap-3 whitespace-nowrap rounded-full bg-gold-400 px-6 py-4 text-base font-bold sm:px-9 sm:py-5 text-navy-950 [text-shadow:none] transition hover:scale-[1.03] hover:bg-gold-300 sm:text-xl"
+            >
+              Book Your Luxury Transformation
+              <ArrowRightIcon className="transition-transform group-hover:translate-x-1" />
+            </Link>
+            <div className="flex items-center gap-6 text-sm font-medium text-white/90">
+              <AnchorLink href="/#styles" className="underline-offset-8 hover:text-gold-300 hover:underline">
+                Explore the style menu
+              </AnchorLink>
+              <span className="h-4 w-px bg-white/30" />
+              <a href={SALON.phoneHref} className="flex items-center gap-2 hover:text-gold-300">
+                <PhoneIcon width={16} height={16} className="text-gold-400" /> {SALON.phone}
+              </a>
             </div>
           </div>
-
-          {/* Right floating card — finished look */}
-          <figure className="animate-float hidden w-[230px] shrink-0 rotate-[5deg] [animation-delay:1.5s] xl:block">
-            <div className="relative aspect-[9/16] overflow-hidden rounded-[1.75rem] border-4 border-gold-400 shadow-[0_30px_60px_-20px_rgb(0_0_0/0.7)]">
-              <Image src="/assets/pix3.jpeg" alt="Finished knotless braids" fill sizes="230px" className="object-cover" priority />
-            </div>
-            <figcaption className="mt-4 text-center text-xs font-semibold uppercase tracking-[0.3em] text-gold-300">
-              Fresh from the chair
-            </figcaption>
-          </figure>
+          </div>
         </div>
 
         {/* Info chips */}

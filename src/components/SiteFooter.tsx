@@ -15,7 +15,7 @@ export function SiteFooter() {
       <div className="gold-rule" />
       <div className="mx-auto grid max-w-7xl gap-12 px-4 py-16 md:grid-cols-3">
         <div className="space-y-5">
-          <Logo size={128} />
+          <Logo size={96} />
           <p className="max-w-xs text-sm leading-relaxed">
             Your beauty satisfaction is our priority. Precision braiding, locs and protective styling for adults &amp; kids —
             crafted in a private suite in Randallstown, Maryland.

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SALON } from "@/lib/config";
+import { AnchorLink } from "./AnchorLink";
 import { ClockIcon, CloseIcon, MenuIcon, PhoneIcon, PinIcon } from "./icons";
 import { Logo } from "./Logo";
 
@@ -57,13 +58,13 @@ export function SiteHeader() {
         }`}
       >
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4">
-          <Logo size={68} />
+          <Logo size={64} />
           <ul className="hidden items-center gap-8 text-sm font-medium text-white/85 lg:flex">
             {NAV.map((n) => (
               <li key={n.href}>
-                <Link href={n.href} className="relative transition-colors hover:text-gold-400 after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-gold-400 after:transition-all hover:after:w-full">
+                <AnchorLink href={n.href} className="relative transition-colors hover:text-gold-400 after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-gold-400 after:transition-all hover:after:w-full">
                   {n.label}
-                </Link>
+                </AnchorLink>
               </li>
             ))}
           </ul>
@@ -89,9 +90,9 @@ export function SiteHeader() {
           <ul className="space-y-1 border-t border-white/10 px-4 pb-6 pt-3 lg:hidden">
             {[...NAV, { href: "/book", label: "Book Now" }].map((n) => (
               <li key={n.href}>
-                <Link href={n.href} onClick={() => setOpen(false)} className="block rounded-lg px-3 py-3 text-white/90 hover:bg-white/5 hover:text-gold-400">
+                <AnchorLink href={n.href} onClick={() => setOpen(false)} className="block rounded-lg px-3 py-3 text-white/90 hover:bg-white/5 hover:text-gold-400">
                   {n.label}
-                </Link>
+                </AnchorLink>
               </li>
             ))}
           </ul>
