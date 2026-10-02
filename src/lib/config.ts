@@ -9,6 +9,11 @@ export const SALON = {
   timeZone: "America/New_York",
   phone: "410-671-1788",
   phoneHref: "tel:+14106711788",
+  smsHref: "sms:+14106711788",
+  // Alternative deposit methods from the salon's booking policy.
+  cashApp: "$peacejoybraids",
+  cashAppUrl: "https://cash.app/$peacejoybraids",
+  zelle: "410-671-1788",
   // Handles as printed on the storefront posters — verify the exact URLs.
   socials: {
     instagram: "https://www.instagram.com/braidsbypeacejoy",

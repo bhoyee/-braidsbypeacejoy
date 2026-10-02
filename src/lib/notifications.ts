@@ -1,6 +1,7 @@
 import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import type { Booking, Service } from "@prisma/client";
+import { addOnsSummary } from "./addons";
 import { SALON } from "./config";
 import { formatDuration, formatSalonDate, formatSalonTime, formatUSD } from "./time";
 
@@ -77,6 +78,7 @@ function details(b: BookingWithService) {
     paid: formatUSD(b.amountPaidCents),
     balance: formatUSD(balance),
     hasBalance: balance > 0,
+    addOns: addOnsSummary(b),
     payUrl: `${(process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "")}/pay?code=${b.bookingCode}`,
   };
 }
@@ -116,6 +118,8 @@ export async function notifyBookingConfirmed(b: BookingWithService, kind: "DEPOS
   const rows: [string, string][] = [
     ["Confirmation code", b.bookingCode],
     ["Service", `${d.service} (${d.duration})`],
+    ...(d.addOns ? ([["Add-ons", `${d.addOns} (+${formatUSD(b.addOnsCents)})`]] as [string, string][]) : []),
+    ["Total", formatUSD(b.totalCents)],
     ["Date", d.date],
     ["Time", d.time],
     ["Paid today", formatUSD(chargedCents)],
@@ -128,7 +132,7 @@ export async function notifyBookingConfirmed(b: BookingWithService, kind: "DEPOS
   const clientFooter = isDeposit
     ? `Your $30 deposit is non-refundable and has locked in your slot. ${
         d.hasBalance ? `Pay the remaining ${d.balance} anytime at <a href="${d.payUrl}">${d.payUrl}</a> or at your appointment.` : ""
-      } Please arrive with hair washed, detangled and blow-dried unless otherwise arranged.`
+      }<br/><br/><strong>Before your appointment:</strong> please arrive with your hair washed and blow-dried, with no oil or product. Running late? Call or text ${SALON.phone}. To cancel or reschedule, reply to this email or text us at least 72 hours before — later cancellations need a new deposit to rebook.`
     : "Thank you! Your balance is cleared. We can't wait to see you.";
 
   const clientSms = isDeposit
@@ -140,6 +144,7 @@ export async function notifyBookingConfirmed(b: BookingWithService, kind: "DEPOS
     ["Client", b.clientName],
     ["Email", b.clientEmail],
     ["Phone", b.clientPhone],
+    ...(b.notes ? ([["Allergies / notes", b.notes]] as [string, string][]) : []),
     ...rows,
   ];
   const adminSms = `${isDeposit ? "NEW BOOKING" : "BALANCE PAID"}: ${b.clientName} — ${d.service}, ${d.date} ${d.time}. Paid ${formatUSD(chargedCents)}. Code ${b.bookingCode}`;
@@ -159,6 +164,7 @@ export async function notifyAppointmentReminder(b: BookingWithService) {
   const d = details(b);
   const rows: [string, string][] = [
     ["Service", d.service],
+    ...(d.addOns ? ([["Add-ons", d.addOns]] as [string, string][]) : []),
     ["Time", d.time],
     ["Code", b.bookingCode],
     ["Balance due", d.balance],

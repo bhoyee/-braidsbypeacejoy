@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SALON } from "@/lib/config";
 import { ClockIcon, InstagramIcon, PhoneIcon, PinIcon, ShieldIcon, TikTokIcon, YouTubeIcon } from "./icons";
 import { Logo } from "./Logo";
+import { PaymentBadges } from "./PaymentBadges";
 
 const SOCIALS = [
   { href: SALON.socials.instagram, label: "Instagram", icon: InstagramIcon },
@@ -58,7 +59,10 @@ export function SiteFooter() {
           <h3 className="font-display text-lg text-gold-400">Appointments</h3>
           <p className="flex gap-3">
             <ShieldIcon className="mt-0.5 shrink-0 text-gold-400" />
-            <span>A strict, non-refundable $30.00 deposit secures every appointment.</span>
+            <span>
+              A strict, non-refundable $30.00 deposit secures every appointment — pay online, or by Cash App{" "}
+              <strong className="text-gold-300">{SALON.cashApp}</strong> or Zelle <strong className="text-gold-300">{SALON.zelle}</strong>.
+            </span>
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
             <Link href="/book" className="rounded-full bg-gold-400 px-5 py-2 font-semibold text-navy-950 hover:bg-gold-300">Book Now</Link>
@@ -66,8 +70,23 @@ export function SiteFooter() {
           </div>
         </div>
       </div>
-      <div className="border-t border-white/10 py-6 text-center text-xs text-white/50">
-        © {new Date().getFullYear()} {SALON.name} · {SALON.fullAddress} · {SALON.phone}
+      {/* Payment methods + legal links */}
+      <div className="border-t border-white/10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-gold-400">We accept</p>
+            <PaymentBadges />
+          </div>
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <Link href="/policies" className="py-1 hover:text-gold-300">Booking Policies</Link>
+            <Link href="/terms" className="py-1 hover:text-gold-300">Terms &amp; Conditions</Link>
+            <Link href="/privacy" className="py-1 hover:text-gold-300">Privacy Policy</Link>
+            <Link href="/#faq" className="py-1 hover:text-gold-300">FAQ</Link>
+          </nav>
+        </div>
+      </div>
+      <div className="border-t border-white/10 px-4 py-6 text-center text-xs text-white/50">
+        © {new Date().getFullYear()} Braids by Peace Joy · {SALON.fullAddress} · {SALON.phone}
       </div>
     </footer>
   );

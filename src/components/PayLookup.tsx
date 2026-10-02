@@ -105,7 +105,11 @@ export function PayLookup({ initialQuery = "" }: { initialQuery?: string }) {
                   </p>
                   <table className="mt-4 w-full text-sm">
                     <tbody className="divide-y divide-navy-900/10">
-                      <tr><td className="py-2 text-navy-900/60">Style total</td><td className="py-2 text-right font-medium">{formatUSD(b.totalCents)}</td></tr>
+                      <tr><td className="py-2 text-navy-900/60">{b.serviceName}</td><td className="py-2 text-right font-medium">{formatUSD(b.totalCents - b.addOnsCents)}</td></tr>
+                      {b.addOnsCents > 0 && (
+                        <tr><td className="py-2 text-navy-900/60">Add-ons: {b.addOnsSummary}</td><td className="py-2 text-right font-medium">+{formatUSD(b.addOnsCents)}</td></tr>
+                      )}
+                      <tr><td className="py-2 text-navy-900/60">Total</td><td className="py-2 text-right font-medium">{formatUSD(b.totalCents)}</td></tr>
                       <tr><td className="py-2 text-navy-900/60">Deposit &amp; payments received</td><td className="py-2 text-right font-medium text-green-700">− {formatUSD(b.amountPaidCents)}</td></tr>
                       <tr><td className="py-3 font-bold text-navy-900">Pending balance (USD)</td><td className="py-3 text-right text-2xl font-bold text-royal-700">{formatUSD(b.balanceCents)}</td></tr>
                     </tbody>

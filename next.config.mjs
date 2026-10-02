@@ -1,5 +1,3 @@
-import type { NextConfig } from "next";
-
 /**
  * Split deployment:
  *  - Vercel (frontend): set API_ORIGIN=https://api.braidsbypeacejoy.com
@@ -7,10 +5,13 @@ import type { NextConfig } from "next";
  *      routes are matched, so the browser only ever talks to one origin (no CORS).
  *  - cPanel (backend): leave API_ORIGIN unset → this same codebase serves the
  *    API routes itself, next to the MySQL database.
+ *
+ * Plain JS (not next.config.ts) so production servers can load it without TypeScript installed.
  */
 const apiOrigin = process.env.API_ORIGIN?.replace(/\/$/, "");
 
-const nextConfig: NextConfig = {
+/** @type {import("next").NextConfig} */
+const nextConfig = {
   poweredByHeader: false,
   // Pin the project root (a stray lockfile on the Desktop confuses Turbopack's detection).
   turbopack: { root: process.cwd() },

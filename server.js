@@ -1,8 +1,8 @@
 /**
  * cPanel "Setup Node.js App" (Phusion Passenger) entry point.
  * Application startup file: server.js
- * Build first (locally or in CI): `npm run build`, then upload the project
- * including the `.next` folder. Passenger supplies PORT.
+ * Builds come from CI and are installed by deploy/server-deploy.sh (see DEPLOYMENT.md).
+ * Passenger supplies PORT.
  */
 const { createServer } = require("node:http");
 const next = require("next");

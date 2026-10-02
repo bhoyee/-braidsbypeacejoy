@@ -37,7 +37,7 @@ The same repository deploys to both hosts:
 ```bash
 npm install
 cp .env.example .env          # fill DATABASE_URL + Stripe test keys
-npx prisma db push            # create tables
+npm run db:migrate:deploy     # create tables from prisma/migrations
 npm run db:seed               # sample style menu (edit prices in prisma/seed.ts)
 npm run dev
 
@@ -48,40 +48,17 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 Leave `API_ORIGIN` unset locally so one process serves both the pages and the API.
 
-## Deploying the backend (cPanel)
+## Deployment (CI/CD)
 
-1. Go to **MySQL Databases**. Create the database and user, and grant the user all privileges.
-2. Go to **Setup Node.js App**:
-   * Node version: 20 or newer
-   * Application root: the uploaded folder
-   * Startup file: `server.js`
-   * Domain: e.g. `api.braidsbypeacejoy.com`
-3. Add the environment variables from `.env.example`, **without** `API_ORIGIN`.
-4. Build. Shared hosting usually doesn't have enough RAM for `next build`, so build locally or in CI with `npm run build`, then upload the project including `.next/`. On the server, run `npm install --omit=dev` (the `postinstall` step generates Prisma), then `npx prisma migrate deploy` (or `db push`) and `npm run db:seed`.
-5. Restart the app.
-6. In **Stripe → Developers → Webhooks**, add `https://api.braidsbypeacejoy.com/api/webhooks/stripe` with these events:
-   * `checkout.session.completed`
-   * `checkout.session.async_payment_succeeded`
-   * `checkout.session.expired`
+Every push to `main` deploys automatically:
 
-   Put the signing secret in `STRIPE_WEBHOOK_SECRET`. Point Stripe straight at the API host, not through Vercel.
-7. In **Stripe → Settings → Payment methods**, enable **Cards**, **Apple Pay** and **Link**. Checkout is restricted to `card` (which includes Apple Pay and Google Pay wallets) and `link`.
-8. In **Cron Jobs**, add a job that runs every minute:
+1. **GitHub Actions** builds the site and publishes it to the `deploy` branch.
+2. **The cPanel server** pulls that branch every 2 minutes. It installs packages, applies database migrations and restarts.
+3. **Vercel** gets the frontend once the backend reports the new version.
 
-   ```
-   * * * * * curl -fsS -H "Authorization: Bearer YOUR_CRON_SECRET" https://api.braidsbypeacejoy.com/api/cron/reminders >/dev/null 2>&1
-   ```
+Full setup, day-to-day usage and troubleshooting are in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
-   This sends the client and admin reminders 30 minutes before each appointment and clears stale holds.
-
-## Deploying the frontend (Vercel)
-
-Import the repo and set these environment variables:
-
-* `NEXT_PUBLIC_SITE_URL=https://braidsbypeacejoy.com`
-* `API_ORIGIN=https://api.braidsbypeacejoy.com`
-
-No database or Stripe secrets are needed on Vercel.
+**Database changes:** edit `prisma/schema.prisma`, run `npm run db:migrate:new -- short_name`, and commit the new folder in `prisma/migrations/`. The server applies it on the next deploy.
 
 ## Notifications
 

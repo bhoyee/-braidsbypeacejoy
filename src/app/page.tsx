@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AnchorLink } from "@/components/AnchorLink";
+import { Faq } from "@/components/Faq";
 import { HeroVideo } from "@/components/HeroVideo";
 import { ServiceCard } from "@/components/ServiceCard";
 import { StudioTour } from "@/components/StudioTour";
@@ -15,6 +16,8 @@ import {
   SparkleIcon,
 } from "@/components/icons";
 import { SALON } from "@/lib/config";
+import { ABOUT_PEACE_JOY, PREP_CHECKLIST } from "@/lib/policies";
+import { buildHomeJsonLd } from "@/lib/seo";
 import { getServices } from "@/lib/services";
 
 // Style menu is regenerated at most every 5 minutes (ISR) — edge-fast on Vercel.
@@ -46,9 +49,12 @@ const GALLERY = [
 
 export default async function HomePage() {
   const services = await getServices();
+  // "<" is escaped so user-editable text (style descriptions) can never break out of the script tag.
+  const jsonLd = JSON.stringify(buildHomeJsonLd(services)).replace(/</g, "\\u003c");
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       {/* ───────────────────────── HERO ───────────────────────── */}
       <section className="relative isolate flex min-h-[100svh] items-center overflow-hidden bg-navy-950">
         {/* Navy backdrop (desktop text side) */}
@@ -79,11 +85,11 @@ export default async function HomePage() {
               <ArrowRightIcon className="transition-transform group-hover:translate-x-1" />
             </Link>
             <div className="flex items-center gap-6 text-sm font-medium text-white/90">
-              <AnchorLink href="/#styles" className="underline-offset-8 hover:text-gold-300 hover:underline">
+              <AnchorLink href="/#styles" className="py-3 underline-offset-8 hover:text-gold-300 hover:underline">
                 Explore the style menu
               </AnchorLink>
               <span className="h-4 w-px bg-white/30" />
-              <a href={SALON.phoneHref} className="flex items-center gap-2 hover:text-gold-300">
+              <a href={SALON.phoneHref} className="flex items-center gap-2 py-3 hover:text-gold-300">
                 <PhoneIcon width={16} height={16} className="text-gold-400" /> {SALON.phone}
               </a>
             </div>
@@ -109,7 +115,7 @@ export default async function HomePage() {
             <h2 className="mt-3 font-display text-4xl font-bold text-navy-900 sm:text-5xl">Choose Your Crown</h2>
             <div className="gold-rule mx-auto mt-6 w-40" />
             <p className="mt-6 text-navy-900/70">
-              Transparent pricing. Every style includes premium braiding hair, a gentle prep and a finishing set.
+              Transparent pricing — the full price and appointment time for every style, upfront. Choose yours and book in minutes.
             </p>
           </div>
 
@@ -196,6 +202,41 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ───────────────────────── MEET YOUR BRAIDER ───────────────────────── */}
+      <section id="about" className="scroll-mt-28 overflow-hidden bg-cream py-20 sm:py-24" aria-labelledby="about-heading">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+          <div className="relative mx-auto w-full max-w-sm">
+            <div className="absolute -inset-3 -rotate-3 rounded-[2.25rem] bg-gold-400/80" aria-hidden="true" />
+            <div className="relative aspect-[9/16] overflow-hidden rounded-[2rem] border-4 border-white shadow-2xl">
+              <Image
+                src="/assets/hero-poster.jpg"
+                alt="A happy client showing off her fresh braids in the Braids by Peace Joy suite"
+                fill
+                sizes="(min-width:1024px) 380px, 90vw"
+                className="object-cover"
+              />
+            </div>
+            <p className="absolute -bottom-5 left-1/2 w-max -translate-x-1/2 rounded-full bg-navy-900 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-gold-300 shadow-xl">
+              Love in every braid
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-royal-700">Meet your braider</p>
+            <h2 id="about-heading" className="mt-3 font-display text-4xl font-bold text-navy-900 sm:text-5xl">
+              Hey love, I&apos;m <span className="italic text-royal-700">Peace Joy.</span>
+            </h2>
+            <div className="gold-rule mt-6 w-40" />
+            <div className="mt-8 space-y-5 text-lg leading-relaxed text-navy-900/80">
+              {ABOUT_PEACE_JOY.slice(0, 2).map((para) => (
+                <p key={para}>{para.replace(/^Hey love, I'm Peace Joy\. /, "")}</p>
+              ))}
+            </div>
+            <p className="mt-8 font-display text-2xl italic text-royal-700">{ABOUT_PEACE_JOY[2]}</p>
+            <p className="mt-2 text-sm font-semibold uppercase tracking-[0.3em] text-gold-600">— Peace Joy</p>
+          </div>
+        </div>
+      </section>
+
       {/* ───────────────────────── EXPERIENCE ───────────────────────── */}
       <section id="experience" className="braid-texture relative scroll-mt-28 overflow-hidden bg-navy-900 py-24 text-white">
         <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-royal-600/40 blur-3xl" />
@@ -230,19 +271,59 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ───────────────────────── POLICY STRIP ───────────────────────── */}
-      <section className="bg-gold-400 py-10 text-navy-950">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-4 md:flex-row">
-          <p className="max-w-3xl text-center font-semibold md:text-left">
-            ⚠️ A strict, non-refundable <strong>$30.00 USD deposit</strong> is required upfront to secure and block your
-            appointment slot. The remaining balance can be paid online or at your appointment.
-          </p>
-          <div className="flex shrink-0 gap-3">
-            <Link href="/book" className="rounded-full bg-navy-900 px-6 py-3 font-semibold text-gold-300 hover:bg-navy-950">Book Now</Link>
-            <Link href="/pay" className="rounded-full border-2 border-navy-900 px-6 py-3 font-semibold hover:bg-navy-900/10">Pay Balance</Link>
+      {/* ───────────────────────── BEFORE YOUR APPOINTMENT ───────────────────────── */}
+      <section id="before" className="scroll-mt-28 bg-gold-400 py-20 text-navy-950 sm:py-24" aria-labelledby="before-heading">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="max-w-2xl">
+              <p className="text-xs font-bold uppercase tracking-[0.35em] text-navy-900/70">Read before booking</p>
+              <h2 id="before-heading" className="mt-3 font-display text-4xl font-bold sm:text-5xl">Before Your Appointment</h2>
+              <p className="mt-4 text-navy-900/80">Kindly read through these instructions before booking to ensure a happy experience.</p>
+            </div>
+            <Link
+              href="/policies"
+              className="inline-flex items-center gap-2 rounded-full bg-navy-900 px-6 py-3 font-semibold text-gold-300 transition hover:bg-navy-950"
+            >
+              Read all booking policies <ArrowRightIcon width={18} height={18} />
+            </Link>
+          </div>
+
+          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {PREP_CHECKLIST.map((item, i) => (
+              <li key={item.title} className="flex gap-4 rounded-2xl bg-white/85 p-5 shadow-sm ring-1 ring-navy-900/5 transition hover:bg-white hover:shadow-lg">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-900 text-sm font-bold text-gold-300">
+                  {i + 1}
+                </span>
+                <div>
+                  <h3 className="font-semibold">{item.title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-navy-900/75">{item.body}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-8 grid gap-4 lg:grid-cols-3">
+            <div className="rounded-2xl bg-navy-900 p-6 text-white lg:col-span-2">
+              <h3 className="font-display text-xl text-gold-300">$30 deposit secures your slot</h3>
+              <p className="mt-2 text-sm leading-relaxed text-white/80">
+                Pay online by card, Apple Pay or Link when you book — your time is locked instantly. Prefer{" "}
+                <strong className="text-gold-300">Cash App {SALON.cashApp}</strong> or{" "}
+                <strong className="text-gold-300">Zelle {SALON.zelle}</strong>? Text us to book that way. Deposits are non-refundable;
+                no call / no show cancels the appointment and forfeits the deposit. Cancel or reschedule at least 72 hours ahead.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-white/85 p-6">
+              <h3 className="font-display text-xl">Pricing &amp; hair</h3>
+              <p className="mt-2 text-sm leading-relaxed text-navy-900/80">
+                Prices include braiding hair (except passion twists &amp; crochet). 2+ colors adds $20. Upgrade to 100% human hair ($80 per
+                bundle) or blended hair ($50 per bundle) when you book, or bring your own.
+              </p>
+            </div>
           </div>
         </div>
       </section>
+
+      <Faq />
 
       {/* ───────────────────────── VISIT ───────────────────────── */}
       <section id="visit" className="scroll-mt-28 bg-cream py-24">

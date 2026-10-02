@@ -3,9 +3,16 @@ import { BookingWizard } from "@/components/booking/BookingWizard";
 import { PolicyBanner } from "@/components/PolicyBanner";
 import { getServices } from "@/lib/services";
 
+const BOOK_DESCRIPTION =
+  "Book knotless, boho, box braids, cornrows and more at Braids by Peace Joy in Randallstown, MD. See live availability 8 AM–7 PM, 7 days a week, and lock your slot with a $30 deposit.";
+
 export const metadata: Metadata = {
-  title: "Book an Appointment",
-  description: "Choose your style, pick an open time between 8 AM and 7 PM, and secure your slot with a $30 deposit.",
+  title: "Book a Braiding Appointment Online",
+  description: BOOK_DESCRIPTION,
+  // ?service=… variants all point Google at the one canonical booking page.
+  alternates: { canonical: "/book" },
+  openGraph: { url: "/book", title: "Book a Braiding Appointment | Braids by Peace Joy", description: BOOK_DESCRIPTION },
+  twitter: { title: "Book a Braiding Appointment | Braids by Peace Joy", description: BOOK_DESCRIPTION },
 };
 
 type SearchParams = Promise<{ service?: string; canceled?: string; session_id?: string }>;

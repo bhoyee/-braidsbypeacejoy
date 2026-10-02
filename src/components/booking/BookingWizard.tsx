@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { NO_ADDONS, quoteAddOns, type AddOnSelection } from "@/lib/addons";
 import type { Slot } from "@/lib/availability";
 import { DEPOSIT_CENTS, MAX_DAYS_AHEAD } from "@/lib/config";
 import type { PublicService } from "@/lib/services";
 import { addDaysToKey, formatDuration, formatSalonDate, formatSalonTime, formatUSD, salonDateKey } from "@/lib/time";
 import { CardIcon, CheckIcon, ClockIcon, ShieldIcon } from "../icons";
 import { Calendar } from "./Calendar";
+import { StyleCustomizer } from "./StyleCustomizer";
 import { TimeSlots } from "./TimeSlots";
 
 const STEPS = ["Style", "Date & Time", "Your Details", "Deposit"] as const;
@@ -17,12 +19,12 @@ type Props = {
   canceledSessionId?: string;
 };
 
-type Details = { clientName: string; clientEmail: string; clientPhone: string; agree: boolean };
+type Details = { clientName: string; clientEmail: string; clientPhone: string; notes: string; agree: boolean };
 
 export function BookingWizard({ services, initialServiceSlug, canceledSessionId }: Props) {
   const preselected = services.find((s) => s.slug === initialServiceSlug);
 
-  const [step, setStep] = useState(preselected ? 1 : 0);
+  const [step, setStep] = useState(0);
   const [serviceId, setServiceId] = useState<string | null>(preselected?.id ?? null);
   const [dateKey, setDateKey] = useState<string | null>(null);
   const [startsAt, setStartsAt] = useState<string | null>(null);
@@ -30,10 +32,12 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
-  const [details, setDetails] = useState<Details>({ clientName: "", clientEmail: "", clientPhone: "", agree: false });
+  const [details, setDetails] = useState<Details>({ clientName: "", clientEmail: "", clientPhone: "", notes: "", agree: false });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [addOns, setAddOns] = useState<AddOnSelection>(NO_ADDONS);
+  const customizeRef = useRef<HTMLDivElement>(null);
 
   const { minKey, maxKey } = useMemo(() => {
     const today = salonDateKey(new Date());
@@ -41,6 +45,8 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
   }, []);
 
   const service = services.find((s) => s.id === serviceId) ?? null;
+  const quote = useMemo(() => quoteAddOns(addOns, service?.hairBundles), [addOns, service?.hairBundles]);
+  const totalCents = (service?.priceCents ?? 0) + quote.totalCents;
 
   // Returning from a cancelled Stripe Checkout → release the held slot immediately.
   useEffect(() => {
@@ -81,11 +87,20 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
   }, [slots, startsAt]);
 
   const chooseService = (id: string) => {
-    setServiceId(id);
-    setStartsAt(null);
-    setSlots(null);
-    setStep(1);
+    if (id !== serviceId) {
+      setServiceId(id);
+      setAddOns(NO_ADDONS);
+      setStartsAt(null);
+      setSlots(null);
+    }
+    // Bring the "Customize your style" panel into view.
+    requestAnimationFrame(() => customizeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   };
+
+  // Arriving from a style card (?service=…) — jump straight to its customize panel.
+  useEffect(() => {
+    if (preselected) setTimeout(() => customizeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
+  }, [preselected]);
 
   const detailsValid =
     details.clientName.trim().length >= 2 &&
@@ -107,6 +122,8 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
           clientName: details.clientName.trim(),
           clientEmail: details.clientEmail.trim(),
           clientPhone: details.clientPhone.trim(),
+          notes: details.notes.trim() || undefined,
+          addOns: { hair: addOns.hair, bundles: quote.bundles, colorMix: addOns.colorMix },
         }),
       });
       const data = await res.json();
@@ -184,11 +201,26 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
                   <span className="font-bold text-royal-700">{formatUSD(s.priceCents)}</span>
                   <span className="flex items-center gap-1"><ClockIcon width={14} height={14} /> {formatDuration(s.durationMin)}</span>
                 </p>
-                <span className="mt-4 inline-block rounded-full bg-royal-700 px-4 py-2 text-xs font-semibold text-white group-hover:bg-gold-400 group-hover:text-navy-950">
-                  Select &amp; Book Slot
+                <span
+                  className={`mt-4 inline-flex items-center gap-1 rounded-full px-4 py-2 text-xs font-semibold ${
+                    s.id === serviceId ? "bg-gold-400 text-navy-950" : "bg-royal-700 text-white group-hover:bg-gold-400 group-hover:text-navy-950"
+                  }`}
+                >
+                  {s.id === serviceId ? (
+                    <>
+                      <CheckIcon width={14} height={14} /> Selected
+                    </>
+                  ) : (
+                    "Select & Book Slot"
+                  )}
                 </span>
               </button>
             ))}
+          </div>
+          <div ref={customizeRef} className="scroll-mt-48">
+            {service && (
+              <StyleCustomizer service={service} value={addOns} quote={quote} onChange={setAddOns} onContinue={() => setStep(1)} />
+            )}
           </div>
         </section>
       )}
@@ -203,7 +235,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
                 {service.name} · {formatDuration(service.durationMin)} — must finish by 7:00 PM
               </p>
             </div>
-            <button type="button" onClick={() => setStep(0)} className="text-sm font-semibold text-royal-700 underline-offset-4 hover:underline">
+            <button type="button" onClick={() => setStep(0)} className="py-2 text-sm font-semibold text-royal-700 underline-offset-4 hover:underline">
               Change style
             </button>
           </div>
@@ -253,16 +285,41 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
             <Field label="Full name" autoComplete="name" value={details.clientName} onChange={(v) => setDetails({ ...details, clientName: v })} />
             <Field label="Email" type="email" autoComplete="email" value={details.clientEmail} onChange={(v) => setDetails({ ...details, clientEmail: v })} />
             <Field label="Mobile phone" type="tel" autoComplete="tel" placeholder="(410) 555-0123" value={details.clientPhone} onChange={(v) => setDetails({ ...details, clientPhone: v })} />
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-semibold text-navy-900">
+                Allergies or notes <span className="font-normal text-navy-900/50">(optional)</span>
+              </span>
+              <textarea
+                rows={3}
+                maxLength={500}
+                value={details.notes}
+                onChange={(e) => setDetails({ ...details, notes: e.target.value })}
+                placeholder="Any allergy to braiding hair or products? Colors you'd like, adding human/blended hair, or bringing your own hair?"
+                className="w-full resize-y rounded-xl border border-navy-900/15 bg-cream/60 px-4 py-3 text-navy-900 outline-none transition placeholder:text-navy-900/40 focus:border-royal-700 focus:bg-white focus:ring-4 focus:ring-royal-700/10"
+              />
+            </label>
+            <div className="rounded-xl bg-cream p-4 text-xs leading-relaxed text-navy-900/75">
+              <p className="mb-1 font-semibold text-navy-900">Before your appointment</p>
+              Hair washed &amp; blow-dried · no oil or product · at least 4 inches long · 2+ colors adds $20 · cancel or
+              reschedule 72+ hours ahead.
+            </div>
             <label className="flex gap-3 rounded-xl bg-gold-200/40 p-4 text-sm text-navy-900">
               <input
                 type="checkbox"
-                className="mt-0.5 h-4 w-4 accent-royal-700"
+                className="mt-0.5 h-5 w-5 shrink-0 accent-royal-700"
                 checked={details.agree}
                 onChange={(e) => setDetails({ ...details, agree: e.target.checked })}
               />
               <span>
-                I understand the <strong>$30.00 deposit is strictly non-refundable</strong> and is required to secure and block my
-                appointment slot.
+                I have read and agree to the{" "}
+                <a href="/policies" target="_blank" className="font-semibold text-royal-700 underline underline-offset-2">
+                  Booking Policies
+                </a>{" "}
+                and{" "}
+                <a href="/terms" target="_blank" className="font-semibold text-royal-700 underline underline-offset-2">
+                  Terms &amp; Conditions
+                </a>
+                , and I understand the <strong>$30.00 deposit is strictly non-refundable</strong>.
               </span>
             </label>
             <button
@@ -291,9 +348,15 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
             </div>
             <dl className="divide-y divide-navy-900/10 px-6 text-sm">
               <Row label="Client" value={`${details.clientName} · ${details.clientPhone}`} />
-              <Row label="Style total" value={formatUSD(service.priceCents)} />
+              {details.notes.trim() && <Row label="Notes" value={details.notes.trim()} />}
+              <Row label={service.name} value={formatUSD(service.priceCents)} />
+              {quote.lines.map((l) => (
+                <Row key={l.label} label={l.label} value={`+${formatUSD(l.cents)}`} />
+              ))}
+              {addOns.hair === "own" && <Row label="Hair" value="Bringing my own" />}
+              <Row label="Total" value={formatUSD(totalCents)} />
               <Row label="Due today (deposit)" value={formatUSD(DEPOSIT_CENTS)} strong />
-              <Row label="Balance due later" value={formatUSD(Math.max(0, service.priceCents - DEPOSIT_CENTS))} />
+              <Row label="Balance due later" value={formatUSD(Math.max(0, totalCents - DEPOSIT_CENTS))} />
             </dl>
             <div className="space-y-4 bg-cream p-6">
               <p className="flex gap-2 text-xs text-navy-900/70">

@@ -3,6 +3,7 @@ import { randomInt, randomUUID } from "node:crypto";
 import { Prisma, type Booking, type Service } from "@prisma/client";
 import type Stripe from "stripe";
 import { findConflict } from "./availability";
+import { addOnsSummary, type AddOnQuote } from "./addons";
 import { CHECKOUT_HOLD_MINUTES } from "./config";
 import { notifyBookingConfirmed, notifyAdminRefund } from "./notifications";
 import { prisma } from "./prisma";
@@ -47,6 +48,8 @@ export async function createDepositHold(input: {
   clientName: string;
   clientEmail: string;
   clientPhone: string;
+  notes?: string;
+  addOns?: { hair: string; bundles: number; colorMix: boolean; quote: AddOnQuote };
 }) {
   const end = new Date(input.start.getTime() + input.service.durationMin * 60_000);
   const holdExpiresAt = new Date(Math.ceil(Date.now() / 1000 + CHECKOUT_HOLD_MINUTES * 60) * 1000);
@@ -59,10 +62,21 @@ export async function createDepositHold(input: {
         clientName: input.clientName,
         clientEmail: input.clientEmail.toLowerCase(),
         clientPhone: input.clientPhone,
+        notes: input.notes || null,
         appointmentAt: input.start,
         endAt: end,
         serviceId: input.service.id,
-        totalCents: input.service.priceCents,
+        totalCents: input.service.priceCents + (input.addOns?.quote.totalCents ?? 0),
+        addOnsCents: input.addOns?.quote.totalCents ?? 0,
+        addOns: input.addOns
+          ? {
+              hair: input.addOns.hair,
+              bundles: input.addOns.bundles,
+              colorMix: input.addOns.colorMix,
+              summary: input.addOns.quote.summary,
+              lines: input.addOns.quote.lines,
+            }
+          : undefined,
         paymentStatus: "PENDING_DEPOSIT",
         // Placeholder until the Stripe session exists (column is unique + required).
         stripeSessionId: `pending_${randomUUID()}`,
@@ -211,6 +225,8 @@ export function toPublicBooking(b: BookingWithService) {
     appointmentAt: b.appointmentAt.toISOString(),
     durationMin: b.service.durationMin,
     totalCents: b.totalCents,
+    addOnsCents: b.addOnsCents,
+    addOnsSummary: addOnsSummary(b),
     amountPaidCents: b.amountPaidCents,
     balanceCents: Math.max(0, b.totalCents - b.amountPaidCents),
     paymentStatus: b.paymentStatus,

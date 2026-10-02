@@ -2,9 +2,15 @@ import type { Metadata } from "next";
 import { PayLookup } from "@/components/PayLookup";
 import { ShieldIcon } from "@/components/icons";
 
+const PAY_DESCRIPTION =
+  "Pay the remaining balance for your Braids by Peace Joy appointment securely online — just enter the email you booked with or your booking code.";
+
 export const metadata: Metadata = {
-  title: "Pay Your Balance",
-  description: "Look up your appointment by email or booking code and settle your remaining balance securely online.",
+  title: "Pay Your Balance Online",
+  description: PAY_DESCRIPTION,
+  alternates: { canonical: "/pay" },
+  openGraph: { url: "/pay", title: "Pay Your Balance | Braids by Peace Joy", description: PAY_DESCRIPTION },
+  twitter: { title: "Pay Your Balance | Braids by Peace Joy", description: PAY_DESCRIPTION },
 };
 
 export default async function PayPage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {

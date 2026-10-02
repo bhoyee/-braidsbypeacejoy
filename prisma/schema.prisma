@@ -40,6 +40,7 @@ model Service {
   imageUrl    String? // e.g. "/assets/styles/knotless.jpg"
   priceCents  Int // Full price of style in cents
   durationMin Int // Service time block in minutes
+  hairBundles Int? // fixed bundle count for hair add-ons (e.g. Bora Bora = 4); null = client chooses
   active      Boolean   @default(true)
   sortOrder   Int       @default(0)
   bookings    Booking[]
@@ -53,11 +54,14 @@ model Booking {
   clientName      String
   clientEmail     String // stored lower-cased
   clientPhone     String
+  notes           String?       @db.Text // allergies / requests entered at booking
   appointmentAt   DateTime // exact locked start (UTC)
   endAt           DateTime // appointmentAt + service duration (UTC) — used for overlap checks
   serviceId       String
   service         Service       @relation(fields: [serviceId], references: [id])
-  totalCents      Int // price snapshot at booking time
+  totalCents      Int // price snapshot at booking time (style + add-ons)
+  addOnsCents     Int           @default(0) // part of totalCents that came from add-ons
+  addOns          Json? // { hair, bundles, colorMix, summary, lines } as booked
   amountPaidCents Int           @default(0)
   paymentStatus   BookingStatus @default(PENDING_DEPOSIT)
   stripeSessionId String        @unique // the deposit Checkout Session

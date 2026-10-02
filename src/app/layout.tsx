@@ -2,63 +2,63 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SALON } from "@/lib/config";
+import { BRAND, siteUrl } from "@/lib/seo";
 import "./globals.css";
 
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", display: "swap" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
+const TITLE = "Braids by Peace Joy | Knotless & Boho Braids in Randallstown, MD";
+const DESCRIPTION =
+  "Luxury braiding studio in Randallstown, MD (PHENIX Salon Suites, Suite 101). Knotless, boho, box braids, cornrows, stitch & Fulani braids and twists for adults and kids. Open 7 days, 8 AM–7 PM — book online.";
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
-  title: {
-    default: "Braidsbypeacejoy | Luxury Braids & Locs in Randallstown, MD",
-    template: "%s | Braidsbypeacejoy",
-  },
-  description: `Luxury knotless braids, boho locs and protective styles. Book online — ${SALON.fullAddress}. Open daily 8 AM – 7 PM.`,
+  metadataBase: new URL(siteUrl()),
+  title: { default: TITLE, template: "%s | Braids by Peace Joy" },
+  description: DESCRIPTION,
+  applicationName: BRAND.name,
+  keywords: [...BRAND.keywords],
+  category: "Beauty salon",
+  alternates: { canonical: "/" },
+  formatDetection: { telephone: true, address: true },
   openGraph: {
     type: "website",
-    siteName: SALON.name,
+    url: "/",
+    siteName: BRAND.name,
+    title: TITLE,
+    description: DESCRIPTION,
     locale: "en_US",
-    images: [{ url: "/assets/logo1.jpeg", width: 1254, height: 1254, alt: "Braids by Peace Joy" }],
+    // Image comes from app/opengraph-image.tsx automatically.
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
   },
   icons: { icon: "/assets/logo2.png", apple: "/assets/logo2.png" },
+  // Paste the code from Google Search Console / Bing Webmaster Tools into these env vars.
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
+    other: process.env.BING_SITE_VERIFICATION ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION } : undefined,
+  },
+  other: { "geo.region": "US-MD", "geo.placename": "Randallstown" },
 };
 
 export const viewport: Viewport = {
   themeColor: "#0b1a4a",
-};
-
-// Local-business structured data for Google Maps / search.
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "HairSalon",
-  name: SALON.name,
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: "8700 Liberty Rd, PHENIX Salon Suite 101",
-    addressLocality: "Randallstown",
-    addressRegion: "MD",
-    addressCountry: "US",
-  },
-  openingHoursSpecification: [
-    {
-      "@type": "OpeningHoursSpecification",
-      dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-      opens: "08:00",
-      closes: "19:00",
-    },
-  ],
-  priceRange: "$$$",
-  telephone: "+1-410-671-1788",
-  image: "/assets/logo1.jpeg",
-  sameAs: Object.values(SALON.socials),
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
+    <html lang="en-US" className={`${playfair.variable} ${inter.variable}`}>
       <body className="min-h-screen">
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         <SiteHeader />
         <main>{children}</main>
         <SiteFooter />

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { HAIR_OPTIONS, MAX_BUNDLES, quoteAddOns } from "@/lib/addons";
 import { validateStart } from "@/lib/availability";
 import { createDepositHold, releaseHold, SlotTakenError } from "@/lib/booking";
 import { CURRENCY, DEPOSIT_CENTS, SALON } from "@/lib/config";
@@ -19,6 +20,14 @@ const Body = z.object({
     .string()
     .trim()
     .regex(/^[+()\-.\s\d]{10,20}$/, "Enter a valid phone number"),
+  notes: z.string().trim().max(500).optional(),
+  addOns: z
+    .object({
+      hair: z.enum(HAIR_OPTIONS.map((o) => o.id) as [string, ...string[]]),
+      bundles: z.number().int().min(1).max(MAX_BUNDLES).optional(),
+      colorMix: z.boolean(),
+    })
+    .optional(),
 });
 
 /**
@@ -42,9 +51,13 @@ export async function POST(req: NextRequest) {
   const invalid = validateStart(start, service.durationMin);
   if (invalid) return NextResponse.json({ error: invalid }, { status: 422 });
 
+  // Re-price add-ons on the server from the style's own bundle count — never trust a client total.
+  const selection = input.addOns ?? { hair: "included", colorMix: false };
+  const quote = quoteAddOns(selection as Parameters<typeof quoteAddOns>[0], service.hairBundles);
+
   let hold: Awaited<ReturnType<typeof createDepositHold>>;
   try {
-    hold = await createDepositHold({ service, start, ...input });
+    hold = await createDepositHold({ service, start, ...input, addOns: { ...selection, bundles: quote.bundles, quote } });
   } catch (err) {
     if (err instanceof SlotTakenError) return NextResponse.json({ error: err.message }, { status: 409 });
     throw err;
@@ -78,7 +91,7 @@ export async function POST(req: NextRequest) {
               unit_amount: DEPOSIT_CENTS,
               product_data: {
                 name: `Non-refundable booking deposit — ${service.name}`,
-                description: `${formatSalonDate(start)} at ${formatSalonTime(start)} · ${SALON.fullAddress}`,
+                description: `${formatSalonDate(start)} at ${formatSalonTime(start)}${quote.totalCents ? ` · Add-ons: ${quote.summary}` : ""} · ${SALON.fullAddress}`,
               },
             },
           },
