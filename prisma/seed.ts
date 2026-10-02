@@ -2,6 +2,8 @@
 // real Braidsbypeacejoy price list, then run: npm run db:seed
 import { PrismaClient } from "@prisma/client";
 
+// Keep Prisma's engine within shared-hosting thread limits (see src/lib/prisma.ts).
+process.env.TOKIO_WORKER_THREADS ??= "2";
 const prisma = new PrismaClient();
 
 const services = [

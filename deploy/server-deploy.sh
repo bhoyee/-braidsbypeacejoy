@@ -32,6 +32,9 @@ mkdir -p "$STATE"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 export PRISMA_HIDE_UPDATE_MESSAGE=1 NPM_CONFIG_UPDATE_NOTIFIER=false NEXT_TELEMETRY_DISABLED=1
+# Prisma's engine starts a thread per CPU core; CloudLinux caps threads per account,
+# which crashes it ("PANIC: timer has gone away"). Two worker threads are plenty.
+export TOKIO_WORKER_THREADS=2
 
 # Keep the log from growing forever (cron appends to it).
 LOG_FILE="$DEPLOY_HOME/deploy.log"
