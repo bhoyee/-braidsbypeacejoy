@@ -20,8 +20,9 @@ import { ABOUT_PEACE_JOY, PREP_CHECKLIST } from "@/lib/policies";
 import { buildHomeJsonLd } from "@/lib/seo";
 import { getServices } from "@/lib/services";
 
-// Style menu is regenerated at most every 5 minutes (ISR) — edge-fast on Vercel.
-export const revalidate = 300;
+// Rendered on each request so the style menu always comes straight from the
+// database (a build made in CI has no database access, so a prebuilt copy would be empty).
+export const dynamic = "force-dynamic";
 
 const PILLARS = [
   {

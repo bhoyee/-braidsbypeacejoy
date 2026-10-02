@@ -2,8 +2,8 @@ import { buildLlmsTxt } from "@/lib/seo";
 import { getServices } from "@/lib/services";
 
 // /llms.txt — a concise, plain-text brief for AI assistants and LLM crawlers
-// (the emerging llmstxt.org convention). Regenerated with the live style menu.
-export const revalidate = 300;
+// (the emerging llmstxt.org convention). Built per request from the live style menu.
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const body = buildLlmsTxt(await getServices());
