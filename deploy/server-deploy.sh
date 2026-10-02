@@ -98,6 +98,7 @@ cp "$SRC/package.json" "$APP_DIR/"  # needed by the npm/prisma commands below
 if ! cmp -s "$SRC/package-lock.json" "$STATE/package-lock.json" || [ ! -d "$VENV/lib/node_modules/next" ]; then
   STEP="installing packages"
   log "📦 Installing packages…"
+  mkdir -p "$VENV/lib/node_modules"   # absent until the first install on a new app
   cp "$SRC/package.json" "$SRC/package-lock.json" "$VENV/lib/"
   ( cd "$VENV/lib" && npm install --omit=dev --ignore-scripts --no-audit --no-fund --loglevel=error )
   cp "$SRC/package-lock.json" "$STATE/package-lock.json"

@@ -68,13 +68,17 @@ env_set() {
   mv "$tmp" "$ENV_FILE" && chmod 600 "$ENV_FILE"
 }
 # Prompts: an empty answer (or no input at all) falls back to the default instead of stopping the setup.
+# Keys pressed while earlier steps were running are thrown away first, so they can't answer a question.
+drain_input() { if [ -t 0 ]; then while read -r -t 0.2 -n 10000 _; do :; done; fi; }
 ask() {
   local reply=""
+  drain_input
   if [ -t 0 ]; then read -r -p "  $1 " reply || true; else read -r reply || true; fi
   printf '%s' "${reply:-$2}"
 }
 ask_secret() {
   local reply=""
+  drain_input
   if [ -t 0 ]; then read -r -s -p "  $1 " reply || true; echo >&2; else read -r reply || true; fi
   printf '%s' "$reply"
 }
@@ -216,6 +220,9 @@ HEALTH_URL="$SITE_URL/api/health"
 CFG
 if [ ! -d "$DEPLOY_HOME/src/.git" ]; then
   git clone --quiet --depth 1 --single-branch --branch deploy "$REPO_URL" "$DEPLOY_HOME/src"
+else
+  # Make sure we run the newest deploy script (fixes ship through the deploy branch).
+  git -C "$DEPLOY_HOME/src" fetch --quiet --depth 1 origin deploy && git -C "$DEPLOY_HOME/src" reset --quiet --hard FETCH_HEAD
 fi
 rm -f "$DEPLOY_HOME/state/failed" "$DEPLOY_HOME/state/deployed"   # always (re)deploy the latest build here
 if ! bash "$DEPLOY_HOME/src/deploy/server-deploy.sh" </dev/null 2>&1 | tee -a "$DEPLOY_HOME/deploy.log" || [ ! -f "$DEPLOY_HOME/state/deployed" ]; then
