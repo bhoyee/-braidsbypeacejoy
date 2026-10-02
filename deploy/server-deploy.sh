@@ -42,9 +42,15 @@ if [ -f "$LOG_FILE" ] && [ "$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)" -gt 
   tail -n 2000 "$LOG_FILE" > "$LOG_FILE.tmp" && mv "$LOG_FILE.tmp" "$LOG_FILE"
 fi
 
-# Only one deploy at a time.
-exec 9>"$DEPLOY_HOME/.lock"
-flock -n 9 || exit 0
+# Only one deploy at a time (a re-exec below already holds the lock).
+if [ -z "${BBPJ_REEXEC:-}" ]; then
+  exec 9>"$DEPLOY_HOME/.lock"
+  flock -n 9 || exit 0
+fi
+
+# Remember this script as it was when it started (see the re-exec after fetching).
+SELF_COPY="$STATE/server-deploy.running.sh"
+cp "${BASH_SOURCE[0]}" "$SELF_COPY" 2>/dev/null || true
 
 # ── 1. Is there a new build? ────────────────────────────────────────────────
 if [ ! -d "$SRC/.git" ]; then
@@ -56,6 +62,14 @@ NEW="$(git -C "$SRC" rev-parse FETCH_HEAD 2>/dev/null || git -C "$SRC" rev-parse
 [ "$NEW" = "$(cat "$STATE/deployed" 2>/dev/null || true)" ] && exit 0   # already live
 [ "$NEW" = "$(cat "$STATE/failed" 2>/dev/null || true)" ] && exit 0     # failed before; wait for a fix
 git -C "$SRC" reset --quiet --hard "$NEW"
+
+# This script ships inside the release. If the new release changed it, re-run the
+# new version now (bash keeps executing the old copy otherwise). The lock (fd 9)
+# is inherited, so nothing else can start in between.
+if [ -z "${BBPJ_REEXEC:-}" ] && ! cmp -s "$SELF_COPY" "$SRC/deploy/server-deploy.sh"; then
+  export BBPJ_REEXEC=1
+  exec bash "$SRC/deploy/server-deploy.sh"
+fi
 VERSION="$(cat "$SRC/DEPLOY_VERSION" 2>/dev/null || echo "$NEW")"
 
 STEP="starting"
