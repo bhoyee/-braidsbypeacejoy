@@ -1,6 +1,6 @@
 /**
  * Split deployment:
- *  - Vercel (frontend): set API_ORIGIN=https://api.braidsbypeacejoy.com
+ *  - Optional split hosting (e.g. frontend on Vercel): set API_ORIGIN=https://api.braidsbypeacejoy.com
  *    → every /api/* request is proxied to the cPanel Node app BEFORE local
  *      routes are matched, so the browser only ever talks to one origin (no CORS).
  *  - cPanel (backend): leave API_ORIGIN unset → this same codebase serves the

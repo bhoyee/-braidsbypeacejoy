@@ -7,18 +7,16 @@ Built with Next.js 16 (App Router), Prisma 6 + MySQL, Stripe Checkout (USD) and 
 ## How it fits together
 
 ```
-Browser ──► Vercel (pages, edge CDN)
-              │  /api/*  ── rewrite (beforeFiles) ──►  cPanel Node app (same codebase)
-              │                                          ├─ Prisma ─► cPanel MySQL
-              │                                          ├─ Stripe API
-Stripe ───────────── webhook ───────────────────────────►├─ /api/webhooks/stripe
-cPanel cron (every minute) ─────────────────────────────►└─ /api/cron/reminders
+Browser ──► braidsbypeacejoy.com ── cPanel Node.js app (pages + /api/*)
+                                       ├─ Prisma ─► cPanel MySQL
+                                       ├─ Stripe API
+Stripe ── webhook ────────────────────►├─ /api/webhooks/stripe
+cPanel cron (every minute) ───────────►└─ /api/cron/reminders
 ```
 
-The same repository deploys to both hosts:
+Everything runs as one Node.js app on the cPanel hosting, next to the database.
 
-* **Vercel** has `API_ORIGIN` set. Every `/api/*` call is proxied to cPanel, so the browser only talks to one origin and no CORS setup is needed. The style menu is fetched from the API and cached for 5 minutes (ISR).
-* **cPanel** has `API_ORIGIN` unset. It serves the API routes itself, right next to MySQL.
+Optional split hosting: setting `API_ORIGIN` makes a separate frontend deployment (for example on Vercel) proxy every `/api/*` call to the cPanel app. It's off by default.
 
 ## Booking and payment lifecycle
 
@@ -54,7 +52,7 @@ Every push to `main` deploys automatically:
 
 1. **GitHub Actions** builds the site and publishes it to the `deploy` branch.
 2. **The cPanel server** pulls that branch every 2 minutes. It installs packages, applies database migrations and restarts.
-3. **Vercel** gets the frontend once the backend reports the new version.
+3. **GitHub** marks the release live once `/api/health` reports the new version.
 
 Full setup, day-to-day usage and troubleshooting are in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 

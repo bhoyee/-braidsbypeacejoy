@@ -32,7 +32,7 @@ export async function listServicesFromDb(): Promise<PublicService[]> {
 
 /**
  * Style menu for server-rendered pages.
- * - On Vercel (API_ORIGIN set): fetch from the cPanel API, cached at the edge (ISR).
+ * - With API_ORIGIN set (optional split hosting): fetch from that API, cached (ISR).
  * - On the API host / local dev: read the database directly.
  * Never throws — the page renders a graceful empty state instead.
  */

@@ -1,18 +1,16 @@
 # Braids by Peace Joy — CI/CD
 #
 #   push to main
-#     └─ 1. build      type-check + production build, publish it to the `deploy` branch
-#     └─ 2. backend    wait until the cPanel server has pulled the build, migrated the
-#                      database and restarted (it reports the commit at /api/health)
-#     └─ 3. frontend   deploy to Vercel (only after the backend is live)
+#     └─ 1. build    type-check + production build, publish it to the `deploy` branch
+#     └─ 2. go live  wait until the cPanel server has pulled the build, migrated the
+#                    database and restarted (it reports the commit at /api/health)
 #
-# The cPanel server pulls the `deploy` branch itself every 2 minutes
-# (deploy/server-deploy.sh via cPanel Cron) — no server passwords live in GitHub.
+# The whole site (pages, API, database) runs on the cPanel hosting. The server pulls
+# the `deploy` branch itself every 2 minutes (deploy/server-deploy.sh via cron), so
+# no server passwords or keys live in GitHub.
 #
-# Repository → Settings → Secrets and variables → Actions:
-#   Variables: SITE_URL     https://braidsbypeacejoy.com
-#              API_ORIGIN   https://api.braidsbypeacejoy.com
-#   Secrets:   VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+# Repository → Settings → Secrets and variables → Actions → Variables:
+#   SITE_URL   https://braidsbypeacejoy.com
 name: Deploy
 
 on:
@@ -90,62 +88,31 @@ jobs:
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" deploy
           echo "Published release ${GITHUB_SHA::7} to the deploy branch"
 
-  backend:
-    name: Wait for backend (cPanel)
+  live:
+    name: Go live (cPanel)
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Wait for the server to deploy this release
         run: |
-          if [ -z "${{ vars.API_ORIGIN }}" ]; then
-            echo "::warning::API_ORIGIN variable not set — skipping the backend check."
+          URL="${{ vars.SITE_URL }}/api/health"
+          # Until the one-time server setup (deploy/bootstrap.sh) has run, the domain
+          # doesn't serve this app yet: don't fail the pipeline for that.
+          FIRST="$(curl -fsS --max-time 20 "$URL" 2>/dev/null || true)"
+          if ! echo "$FIRST" | grep -q '"version"'; then
+            echo "::warning::$URL is not serving the app yet — run the one-time server setup (DEPLOYMENT.md). Skipping the live check."
             exit 0
           fi
-          URL="${{ vars.API_ORIGIN }}/api/health"
           echo "Waiting for $URL to report ${GITHUB_SHA::7} (the server checks for new releases every 2 minutes)…"
           for i in $(seq 1 80); do
             BODY="$(curl -fsS --max-time 20 "$URL" 2>/dev/null || true)"
             if echo "$BODY" | grep -q "\"version\":\"${GITHUB_SHA}\""; then
-              echo "✅ Backend is live: $BODY"
+              echo "✅ Live: $BODY"
               exit 0
             fi
             sleep 10
           done
-          echo "::error::The server did not pick up this release within ~13 minutes. Check ~/bbpj-deploy/deploy.log on the server (cPanel → Terminal: tail -50 ~/bbpj-deploy/deploy.log)."
+          echo "::error::The server did not go live with this release within ~13 minutes. In cPanel → Terminal run: tail -50 ~/bbpj-deploy/deploy.log"
           echo "Last response: $BODY"
           exit 1
-
-  frontend:
-    name: Deploy frontend (Vercel)
-    needs: backend
-    runs-on: ubuntu-latest
-    env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Check Vercel secrets
-        id: check
-        run: |
-          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
-            echo "::warning::Vercel secrets not set — skipping the frontend deploy."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: actions/setup-node@v5
-        if: steps.check.outputs.skip != 'true'
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Deploy to Vercel (production)
-        if: steps.check.outputs.skip != 'true'
-        run: |
-          npm install --global vercel@latest
-          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-          vercel build --prod --token="$VERCEL_TOKEN"
-          URL="$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")"
-          echo "✅ Frontend deployed: $URL"
