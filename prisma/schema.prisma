@@ -1,0 +1,100 @@
+// Braidsbypeacejoy — MySQL schema (cPanel)
+// All money is stored as integer cents (USD). $30.00 = 3000.
+// All DateTime values are stored in UTC; the salon timezone (America/New_York)
+// is applied only at the edges (UI + notifications).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum BookingStatus {
+  PENDING_DEPOSIT // slot is temporarily held while the client is on Stripe Checkout
+  DEPOSIT_PAID // $30 deposit captured — slot is locked
+  FULLY_SETTLED // full style price captured — slot is locked
+  EXPIRED // checkout abandoned/expired — slot released
+  REFUNDED // paid but could not be honoured (e.g. race on the same slot) — refunded automatically
+}
+
+enum PaymentKind {
+  DEPOSIT
+  BALANCE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+  REFUNDED
+}
+
+model Service {
+  id          String    @id @default(uuid())
+  slug        String    @unique
+  name        String // e.g. "Knotless Braids", "Boho Locs"
+  description String?   @db.Text
+  imageUrl    String? // e.g. "/assets/styles/knotless.jpg"
+  priceCents  Int // Full price of style in cents
+  durationMin Int // Service time block in minutes
+  active      Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  bookings    Booking[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Booking {
+  id              String        @id @default(uuid())
+  bookingCode     String        @unique // human-friendly code, e.g. "PJ-7K3Q9X" (used on /pay)
+  clientName      String
+  clientEmail     String // stored lower-cased
+  clientPhone     String
+  appointmentAt   DateTime // exact locked start (UTC)
+  endAt           DateTime // appointmentAt + service duration (UTC) — used for overlap checks
+  serviceId       String
+  service         Service       @relation(fields: [serviceId], references: [id])
+  totalCents      Int // price snapshot at booking time
+  amountPaidCents Int           @default(0)
+  paymentStatus   BookingStatus @default(PENDING_DEPOSIT)
+  stripeSessionId String        @unique // the deposit Checkout Session
+  holdExpiresAt   DateTime? // only meaningful while PENDING_DEPOSIT
+  reminderSentAt  DateTime?
+  payments        Payment[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([appointmentAt, endAt])
+  @@index([clientEmail])
+  @@index([paymentStatus, appointmentAt])
+}
+
+// One row per Stripe Checkout Session (deposit or balance). Gives us an
+// idempotent ledger for webhook processing.
+model Payment {
+  id                    String        @id @default(uuid())
+  bookingId             String
+  booking               Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  kind                  PaymentKind
+  amountCents           Int
+  status                PaymentStatus @default(PENDING)
+  stripeSessionId       String        @unique
+  stripePaymentIntentId String?
+  paidAt                DateTime?
+  createdAt             DateTime      @default(now())
+
+  @@index([bookingId, kind, status])
+}
+
+// Single-row mutex. `SELECT ... FOR UPDATE` on this row serialises every
+// "check slot → write booking" sequence (one stylist = one global calendar).
+// InnoDB releases the row lock on COMMIT/ROLLBACK, so there is no window in
+// which two transactions can both see a slot as free.
+model SchedulerLock {
+  id Int @id
+
+  @@map("scheduler_lock")
+}

@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy-950: #040b26;
+  --color-navy-900: #0b1a4a;
+  --color-navy-800: #12256b;
+  --color-royal-700: #1e3a8a;
+  --color-royal-600: #2447b3;
+  --color-royal-500: #3b63e0;
+  --color-gold-200: #ffe9a8;
+  --color-gold-300: #ffd866;
+  --color-gold-400: #ffc72c;
+  --color-gold-500: #f5b000;
+  --color-gold-600: #c98f00;
+  --color-cream: #fffaf0;
+  --color-ink: #0a1230;
+
+  --font-display: var(--font-playfair), ui-serif, Georgia, serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --animate-glow: glow 2.8s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-fade-up: fade-up 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgb(255 199 44 / 0.55), 0 18px 40px -12px rgb(255 199 44 / 0.6); }
+    50% { box-shadow: 0 0 0 14px rgb(255 199 44 / 0), 0 24px 60px -10px rgb(255 199 44 / 0.75); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-gold-400);
+  color: var(--color-navy-950);
+}
+
+/* Fine gold hairline used to separate luxury sections */
+.gold-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-gold-400), transparent);
+}
+
+/* Subtle woven-braid texture for blue surfaces & image fallbacks */
+.braid-texture {
+  background-image:
+    radial-gradient(circle at 25% 25%, rgb(255 199 44 / 0.10) 0 2px, transparent 3px),
+    radial-gradient(circle at 75% 75%, rgb(255 255 255 / 0.06) 0 2px, transparent 3px);
+  background-size: 22px 22px;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(100deg, var(--color-gold-200), var(--color-gold-400) 45%, var(--color-gold-500));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-video { display: none; }
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
