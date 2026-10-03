@@ -100,14 +100,14 @@ jobs:
           URL="${{ vars.SITE_URL }}/api/health"
           # Until the one-time server setup (deploy/bootstrap.sh) has run, the domain
           # doesn't serve this app yet: don't fail the pipeline for that.
-          FIRST="$(curl -fsS --max-time 20 "$URL" 2>/dev/null || true)"
+          FIRST="$(curl -fsS --max-time 20 -H "Cache-Control: no-cache" "$URL?t=$(date +%s%N)" 2>/dev/null || true)"
           if ! echo "$FIRST" | grep -q '"version"'; then
             echo "::warning::$URL is not serving the app yet — run the one-time server setup (DEPLOYMENT.md). Skipping the live check."
             exit 0
           fi
           echo "Waiting for $URL to report ${GITHUB_SHA::7} (the server checks for new releases every 2 minutes)…"
           for i in $(seq 1 80); do
-            BODY="$(curl -fsS --max-time 20 "$URL" 2>/dev/null || true)"
+            BODY="$(curl -fsS --max-time 20 -H "Cache-Control: no-cache" "$URL?t=$(date +%s%N)" 2>/dev/null || true)"
             if echo "$BODY" | grep -q "\"version\":\"${GITHUB_SHA}\""; then
               echo "✅ Live: $BODY"
               exit 0

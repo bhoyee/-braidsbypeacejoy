@@ -180,10 +180,12 @@ purge_page_cache() {
 
 # ── 7. Health check (also wakes the app up) ─────────────────────────────────
 if [ -n "$HEALTH_URL" ]; then
+  purge_page_cache
   for _ in $(seq 1 12); do
-    if curl -fsS --max-time 20 "$HEALTH_URL" 2>/dev/null | grep -q "\"version\":\"$VERSION\""; then
+    # Cache-buster: make sure we ask the app itself, not a cached copy.
+    if curl -fsS --max-time 20 -H "Cache-Control: no-cache" "$HEALTH_URL?t=$(date +%s%N)" 2>/dev/null | grep -q "\"version\":\"$VERSION\""; then
       log "✅ Live and healthy: ${VERSION:0:7}"
-      purge_page_cache
+      purge_page_cache   # once more, now that the new app is answering
       exit 0
     fi
     sleep 5
