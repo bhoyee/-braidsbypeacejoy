@@ -47,6 +47,27 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Tailwind v4 gives buttons the default arrow cursor; restore the hand on everything
+   clickable, and a "not allowed" cursor on disabled controls.
+   In the base layer, so a utility class like cursor-default can still override it. */
+@layer base {
+  button:not(:disabled),
+  [role="button"],
+  summary,
+  select:not(:disabled),
+  label:has(> input[type="checkbox"]:not(:disabled)),
+  label:has(> input[type="radio"]:not(:disabled)),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled,
+  input:disabled {
+    cursor: not-allowed;
+  }
+}
+
 ::selection {
   background: var(--color-gold-400);
   color: var(--color-navy-950);

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { HAIR_OPTIONS, MAX_BUNDLES, quoteAddOns } from "@/lib/addons";
 import { validateStart } from "@/lib/availability";
+import { formatUsPhone, isValidUsPhone } from "@/lib/phone";
 import { createDepositHold, releaseHold, SlotTakenError } from "@/lib/booking";
 import { CURRENCY, DEPOSIT_CENTS, SALON } from "@/lib/config";
 import { prisma } from "@/lib/prisma";
@@ -19,7 +20,9 @@ const Body = z.object({
   clientPhone: z
     .string()
     .trim()
-    .regex(/^[+()\-.\s\d]{10,20}$/, "Enter a valid phone number"),
+    .max(20)
+    .refine(isValidUsPhone, "Enter a valid US phone number, e.g. (410) 555-0123")
+    .transform(formatUsPhone), // stored as (410) 555-0123
   notes: z.string().trim().max(500).optional(),
   addOns: z
     .object({

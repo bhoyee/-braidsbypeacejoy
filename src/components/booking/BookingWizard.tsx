@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NO_ADDONS, quoteAddOns, type AddOnSelection } from "@/lib/addons";
+import { formatUsPhone, isValidUsPhone, usPhoneDigits } from "@/lib/phone";
 import type { Slot } from "@/lib/availability";
 import { DEPOSIT_CENTS, MAX_DAYS_AHEAD } from "@/lib/config";
 import type { PublicService } from "@/lib/services";
@@ -106,7 +107,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
   const detailsValid =
     details.clientName.trim().length >= 2 &&
     /^\S+@\S+\.\S+$/.test(details.clientEmail.trim()) &&
-    details.clientPhone.replace(/\D/g, "").length >= 10 &&
+    isValidUsPhone(details.clientPhone) &&
     details.agree;
 
   async function pay() {
@@ -255,7 +256,20 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
           >
             <Field label="Full name" autoComplete="name" value={details.clientName} onChange={(v) => setDetails({ ...details, clientName: v })} />
             <Field label="Email" type="email" autoComplete="email" value={details.clientEmail} onChange={(v) => setDetails({ ...details, clientEmail: v })} />
-            <Field label="Mobile phone" type="tel" autoComplete="tel" placeholder="(410) 555-0123" value={details.clientPhone} onChange={(v) => setDetails({ ...details, clientPhone: v })} />
+            <Field
+              label="Mobile phone (US)"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel-national"
+              placeholder="(410) 555-0123"
+              value={details.clientPhone}
+              onChange={(v) => setDetails({ ...details, clientPhone: formatUsPhone(v) })}
+              error={
+                usPhoneDigits(details.clientPhone).length === 10 && !isValidUsPhone(details.clientPhone)
+                  ? "That isn't a valid US number — the area code can't start with 0 or 1."
+                  : undefined
+              }
+            />
             <label className="block">
               <span className="mb-1.5 block text-sm font-semibold text-navy-900">
                 Allergies or notes <span className="font-normal text-navy-900/50">(optional)</span>
@@ -360,6 +374,9 @@ function Field(props: {
   type?: string;
   autoComplete?: string;
   placeholder?: string;
+  inputMode?: "text" | "tel" | "email";
+  maxLength?: number;
+  error?: string;
 }) {
   return (
     <label className="block">
@@ -367,12 +384,18 @@ function Field(props: {
       <input
         required
         type={props.type ?? "text"}
+        inputMode={props.inputMode}
         autoComplete={props.autoComplete}
         placeholder={props.placeholder}
+        maxLength={props.maxLength}
         value={props.value}
+        aria-invalid={props.error ? true : undefined}
         onChange={(e) => props.onChange(e.target.value)}
-        className="w-full rounded-xl border border-navy-900/15 bg-cream/60 px-4 py-3 text-navy-900 outline-none transition focus:border-royal-700 focus:bg-white focus:ring-4 focus:ring-royal-700/10"
+        className={`w-full rounded-xl border bg-cream/60 px-4 py-3 text-navy-900 outline-none transition focus:bg-white focus:ring-4 ${
+          props.error ? "border-red-400 focus:border-red-500 focus:ring-red-500/10" : "border-navy-900/15 focus:border-royal-700 focus:ring-royal-700/10"
+        }`}
       />
+      {props.error && <span className="mt-1.5 block text-sm text-red-600">{props.error}</span>}
     </label>
   );
 }
