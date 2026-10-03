@@ -55,32 +55,31 @@ export function OutcomeButtons({ id, started, current }: { id: string; started: 
   return (
     <section className={card}>
       <h2 className="font-display text-xl text-navy-900">After the appointment</h2>
-      {!started ? (
-        <p className="mt-1 text-sm text-navy-900/60">Available once the appointment time has passed.</p>
-      ) : (
-        <form action={action} className="mt-4 flex flex-wrap gap-2">
-          <input type="hidden" name="id" value={id} />
-          <button name="outcome" value="COMPLETED" disabled={pending || current === "COMPLETED"} className="rounded-full bg-green-600 px-5 py-2.5 font-semibold text-white hover:bg-green-700 disabled:opacity-40">
-            ✓ Completed
+      <p className="mt-1 text-sm text-navy-900/60">
+        {started ? "Did the client come? You can change this later." : "These unlock when the appointment starts."}
+      </p>
+      <form action={action} className="mt-4 flex flex-wrap gap-2">
+        <input type="hidden" name="id" value={id} />
+        <button name="outcome" value="COMPLETED" disabled={!started || pending || current === "COMPLETED"} className="rounded-full bg-green-600 px-5 py-2.5 font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40">
+          ✓ Completed
+        </button>
+        <button
+          name="outcome"
+          value="NO_SHOW"
+          disabled={!started || pending || current === "NO_SHOW"}
+          onClick={(e) => {
+            if (!confirm("Mark as no-show? The deposit is kept (no refund for no-shows).")) e.preventDefault();
+          }}
+          className="rounded-full bg-orange-500 px-5 py-2.5 font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          No-show
+        </button>
+        {current && (
+          <button name="outcome" value="" disabled={pending} className="rounded-full px-4 py-2.5 text-sm font-semibold text-navy-900/60 hover:text-navy-900">
+            Undo
           </button>
-          <button
-            name="outcome"
-            value="NO_SHOW"
-            disabled={pending || current === "NO_SHOW"}
-            onClick={(e) => {
-              if (!confirm("Mark as no-show? The deposit is kept (no refund for no-shows).")) e.preventDefault();
-            }}
-            className="rounded-full bg-orange-500 px-5 py-2.5 font-semibold text-white hover:bg-orange-600 disabled:opacity-40"
-          >
-            No-show
-          </button>
-          {current && (
-            <button name="outcome" value="" disabled={pending} className="rounded-full px-4 py-2.5 text-sm font-semibold text-navy-900/60 hover:text-navy-900">
-              Undo
-            </button>
-          )}
-        </form>
-      )}
+        )}
+      </form>
       <Feedback state={state} />
     </section>
   );
@@ -140,5 +139,31 @@ export function CancelForm({ id, canRefund }: { id: string; canRefund: boolean }
       </form>
       <Feedback state={state} />
     </section>
+  );
+}
+
+/** Compact Completed / No-show buttons for the booking list. */
+export function QuickOutcome({ id }: { id: string }) {
+  const [state, action, pending] = useActionState<ActionState, FormData>(outcomeAction, null);
+  if (state?.ok) return null; // the list refreshes with the new badge
+  return (
+    <form action={action} className="flex gap-1.5">
+      <input type="hidden" name="id" value={id} />
+      <button name="outcome" value="COMPLETED" disabled={pending} className="rounded-full bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+        ✓ Completed
+      </button>
+      <button
+        name="outcome"
+        value="NO_SHOW"
+        disabled={pending}
+        onClick={(e) => {
+          if (!confirm("Mark as no-show? The deposit is kept (no refund for no-shows).")) e.preventDefault();
+        }}
+        className="rounded-full bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
+      >
+        No-show
+      </button>
+      {state && !state.ok && <span className="self-center text-xs text-red-700">{state.error}</span>}
+    </form>
   );
 }

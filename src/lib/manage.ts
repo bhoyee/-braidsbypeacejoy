@@ -12,6 +12,7 @@ import { stripe } from "./stripe";
 export const MANAGE_TABS = [
   { id: "today", label: "Today" },
   { id: "upcoming", label: "Upcoming" },
+  { id: "review", label: "Needs update" },
   { id: "past", label: "Past" },
   { id: "cancelled", label: "Cancelled" },
 ] as const;
@@ -35,6 +36,9 @@ function tabWhere(tab: ManageTab, now = new Date()): Prisma.BookingWhereInput {
       return { paymentStatus: { in: [...ACTIVE] }, appointmentAt: { gte: dayStart, lt: dayEnd } };
     case "upcoming":
       return { paymentStatus: { in: [...ACTIVE] }, appointmentAt: { gte: now } };
+    case "review":
+      // Appointment time has passed but not yet marked completed / no-show.
+      return { paymentStatus: { in: [...ACTIVE] }, appointmentAt: { lt: now }, outcome: null };
     case "past":
       return { paymentStatus: { in: [...ACTIVE] }, appointmentAt: { lt: now } };
     case "cancelled":
@@ -56,10 +60,20 @@ function searchWhere(q: string): Prisma.BookingWhereInput {
   };
 }
 
-export async function listBookings(tab: ManageTab, q: string, page: number) {
-  const where: Prisma.BookingWhereInput = { AND: [tabWhere(tab), searchWhere(q)] };
+/** Every booking (confirmed or cancelled) on one salon-local day, e.g. "2026-10-06". */
+function dayWhere(date: string): Prisma.BookingWhereInput {
+  return {
+    paymentStatus: { in: [...ACTIVE, "CANCELLED", "REFUNDED"] },
+    appointmentAt: { gte: salonTimeToUtc(date, 0), lt: salonTimeToUtc(date, 24 * 60) },
+  };
+}
+
+export const isDateKey = (v: string | undefined): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
+
+export async function listBookings(tab: ManageTab, q: string, page: number, date?: string) {
+  const where: Prisma.BookingWhereInput = { AND: [date ? dayWhere(date) : tabWhere(tab), searchWhere(q)] };
   const order: Prisma.BookingOrderByWithRelationInput =
-    tab === "upcoming" || tab === "today" ? { appointmentAt: "asc" } : tab === "cancelled" ? { cancelledAt: "desc" } : { appointmentAt: "desc" };
+    date || tab === "upcoming" || tab === "today" ? { appointmentAt: "asc" } : tab === "cancelled" ? { cancelledAt: "desc" } : { appointmentAt: "desc" };
   const [total, items, counts] = await Promise.all([
     prisma.booking.count({ where }),
     prisma.booking.findMany({ where, orderBy: order, skip: (page - 1) * PAGE, take: PAGE, include: { service: true } }),
