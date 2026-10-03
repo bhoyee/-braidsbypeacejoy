@@ -105,7 +105,7 @@ export function CheckoutStatus({ sessionId }: { sessionId: string }) {
       <h1 className="mt-6 font-display text-4xl font-bold text-navy-900">
         {isBalance ? "Balance paid — thank you!" : `You're booked, ${b.firstName}!`}
       </h1>
-      <p className="mt-2 text-navy-900/60">A confirmation has been sent by email and text message.</p>
+      <p className="mt-2 text-navy-900/60">A confirmation has been sent to your email.</p>
 
       <div className="mt-8 overflow-hidden rounded-2xl text-left ring-1 ring-navy-900/10">
         <div className="braid-texture bg-navy-900 p-5 text-white">

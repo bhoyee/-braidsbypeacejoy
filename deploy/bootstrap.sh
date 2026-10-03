@@ -123,9 +123,6 @@ env_set NEXT_PUBLIC_SITE_URL "$SITE_URL"
 if [ -z "$(env_get ADMIN_EMAIL)" ]; then
   env_set ADMIN_EMAIL "$(ask "Email address for booking alerts to the owner:" "")"
 fi
-if [ -z "$(env_get ADMIN_PHONE)" ]; then
-  env_set ADMIN_PHONE "$(ask "Owner's mobile for text alerts (e.g. +14106711788, Enter to skip):" "")"
-fi
 
 STRIPE_KEY="$(env_get STRIPE_SECRET_KEY)"
 if [[ "$STRIPE_KEY" != sk_* ]]; then

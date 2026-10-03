@@ -8,7 +8,7 @@ import { formatDuration, formatSalonDate, formatSalonTime, formatUSD } from "./t
 type BookingWithService = Booking & { service: Service };
 
 /* ------------------------------------------------------------------ */
-/* Transports — each is optional; missing credentials = log and skip.  */
+/* Email (cPanel mailbox) — if SMTP isn't configured, messages are logged. */
 /* ------------------------------------------------------------------ */
 
 let mailer: Transporter | null = null;
@@ -33,29 +33,6 @@ export async function sendEmail(to: string, subject: string, html: string, text:
     html,
     text,
   });
-}
-
-/** Twilio Programmable SMS over plain REST (no SDK needed on shared hosting). */
-export async function sendSms(to: string, body: string) {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_FROM_NUMBER;
-  if (!sid || !token || !from) return console.info(`[sms:skipped] ${to} — ${body}`);
-  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({ To: toE164(to), From: from, Body: body }),
-  });
-  if (!res.ok) throw new Error(`Twilio ${res.status}: ${await res.text()}`);
-}
-
-function toE164(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  if (phone.trim().startsWith("+")) return `+${digits}`;
-  return digits.length === 10 ? `+1${digits}` : `+${digits}`;
 }
 
 /** Sends every message, logging failures instead of throwing on the first one. */
@@ -131,11 +108,14 @@ export async function notifyBookingConfirmed(b: BookingWithService, kind: "DEPOS
     : `Payment received — you're fully settled for ${d.date}`;
   const clientFooter = isDeposit
     ? `Your $30 deposit is non-refundable and has locked in your slot. ${
-        d.hasBalance ? `Pay the remaining ${d.balance} anytime at <a href="${d.payUrl}">${d.payUrl}</a> or at your appointment.` : ""
+        d.hasBalance
+          ? `Pay the remaining ${d.balance} anytime at <a href="${d.payUrl}">${d.payUrl}</a>, by Cash App (${SALON.cashApp}) or Zelle (${SALON.zelle}) with your code ${b.bookingCode} in the note, or at your appointment.`
+          : ""
       }<br/><br/><strong>Before your appointment:</strong> please arrive with your hair washed and blow-dried, with no oil or product. Running late? Call or text ${SALON.phone}. To cancel or reschedule, reply to this email or text us at least 72 hours before — later cancellations need a new deposit to rebook.`
     : "Thank you! Your balance is cleared. We can't wait to see you.";
 
-  const clientSms = isDeposit
+  // Plain-text version of the email.
+  const clientText = isDeposit
     ? `${SALON.name}: Confirmed! ${d.service} on ${d.date} at ${d.time}. Code ${b.bookingCode}. Balance ${d.balance}. ${SALON.fullAddress}`
     : `${SALON.name}: Payment of ${formatUSD(chargedCents)} received for ${d.date} at ${d.time}. Balance ${d.balance}. Code ${b.bookingCode}.`;
 
@@ -147,15 +127,13 @@ export async function notifyBookingConfirmed(b: BookingWithService, kind: "DEPOS
     ...(b.notes ? ([["Allergies / notes", b.notes]] as [string, string][]) : []),
     ...rows,
   ];
-  const adminSms = `${isDeposit ? "NEW BOOKING" : "BALANCE PAID"}: ${b.clientName} — ${d.service}, ${d.date} ${d.time}. Paid ${formatUSD(chargedCents)}. Code ${b.bookingCode}`;
+  const adminText = `${isDeposit ? "NEW BOOKING" : "BALANCE PAID"}: ${b.clientName} — ${d.service}, ${d.date} ${d.time}. Paid ${formatUSD(chargedCents)}. Code ${b.bookingCode}`;
 
   const jobs: Promise<unknown>[] = [
-    sendEmail(b.clientEmail, clientSubject, emailShell(isDeposit ? "You're booked! ✨" : "Payment received ✨", rows, clientFooter), clientSms),
-    sendSms(b.clientPhone, clientSms),
+    sendEmail(b.clientEmail, clientSubject, emailShell(isDeposit ? "You're booked! ✨" : "Payment received ✨", rows, clientFooter), clientText),
   ];
   if (process.env.ADMIN_EMAIL)
-    jobs.push(sendEmail(process.env.ADMIN_EMAIL, adminSubject, emailShell(adminSubject, adminRows, "Logged automatically by the booking system."), adminSms));
-  if (process.env.ADMIN_PHONE) jobs.push(sendSms(process.env.ADMIN_PHONE, adminSms));
+    jobs.push(sendEmail(process.env.ADMIN_EMAIL, adminSubject, emailShell(adminSubject, adminRows, "Logged automatically by the booking system."), adminText));
   await dispatch(jobs);
 }
 
@@ -169,23 +147,21 @@ export async function notifyAppointmentReminder(b: BookingWithService) {
     ["Code", b.bookingCode],
     ["Balance due", d.balance],
   ];
-  const clientSms = `${SALON.name}: Reminder — your ${d.service} appointment starts at ${d.time} (in 30 min). ${SALON.fullAddress}.${
+  const clientText = `${SALON.name}: Reminder — your ${d.service} appointment starts at ${d.time} (in 30 min). ${SALON.fullAddress}.${
     d.hasBalance ? ` Balance due: ${d.balance}.` : ""
   }`;
-  const adminSms = `REMINDER: ${b.clientName} (${b.clientPhone}) — ${d.service} at ${d.time}. Balance ${d.balance}.`;
+  const adminText = `REMINDER: ${b.clientName} (${b.clientPhone}) — ${d.service} at ${d.time}. Balance ${d.balance}.`;
 
   const jobs: Promise<unknown>[] = [
     sendEmail(
       b.clientEmail,
       `Starting in 30 minutes: ${d.service} at ${d.time}`,
       emailShell("See you in 30 minutes! 💛", rows, `Find us at ${SALON.fullAddress}. <a href="${SALON.mapsUrl}">Open in Maps</a>.`),
-      clientSms,
+      clientText,
     ),
-    sendSms(b.clientPhone, clientSms),
   ];
   if (process.env.ADMIN_EMAIL)
-    jobs.push(sendEmail(process.env.ADMIN_EMAIL, `⏰ In 30 min: ${b.clientName} — ${d.service}`, emailShell("Upcoming client", [["Client", b.clientName], ["Phone", b.clientPhone], ...rows], ""), adminSms));
-  if (process.env.ADMIN_PHONE) jobs.push(sendSms(process.env.ADMIN_PHONE, adminSms));
+    jobs.push(sendEmail(process.env.ADMIN_EMAIL, `⏰ In 30 min: ${b.clientName} — ${d.service}`, emailShell("Upcoming client", [["Client", b.clientName], ["Phone", b.clientPhone], ...rows], ""), adminText));
   await dispatch(jobs);
 }
 
@@ -195,6 +171,5 @@ export async function notifyAdminRefund(b: BookingWithService, cents: number) {
   const msg = `AUTO-REFUND ${formatUSD(cents)}: ${b.clientName} (${b.clientEmail}, ${b.clientPhone}) for ${d.service} ${d.date} ${d.time}, code ${b.bookingCode}. Slot conflict or duplicate payment — please follow up.`;
   const jobs: Promise<unknown>[] = [];
   if (process.env.ADMIN_EMAIL) jobs.push(sendEmail(process.env.ADMIN_EMAIL, "⚠️ Payment auto-refunded", `<p>${esc(msg)}</p>`, msg));
-  if (process.env.ADMIN_PHONE) jobs.push(sendSms(process.env.ADMIN_PHONE, msg));
   await dispatch(jobs);
 }

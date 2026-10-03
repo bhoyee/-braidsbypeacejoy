@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { PublicBooking } from "@/lib/booking";
+import { SALON } from "@/lib/config";
 import { formatSalonDate, formatSalonTime, formatUSD } from "@/lib/time";
 import { CardIcon, SearchIcon } from "./icons";
 
@@ -123,6 +124,7 @@ export function PayLookup({ initialQuery = "" }: { initialQuery?: string }) {
                     <CardIcon />
                     {payingId === b.id ? "Redirecting to secure checkout…" : `Pay ${formatUSD(b.balanceCents)} Now`}
                   </button>
+                  <AltPayment amountCents={b.balanceCents} bookingCode={b.bookingCode} />
                 </div>
               </article>
             ))
@@ -130,5 +132,65 @@ export function PayLookup({ initialQuery = "" }: { initialQuery?: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** Cash App / Zelle option for one booking. These payments aren't seen by the website,
+ *  so the client includes the booking code and texts a screenshot to be marked paid. */
+function AltPayment({ amountCents, bookingCode }: { amountCents: number; bookingCode: string }) {
+  const amount = (amountCents / 100).toFixed(2).replace(/\.00$/, "");
+  return (
+    <div className="mt-4 rounded-2xl bg-cream p-4 text-sm text-navy-900">
+      <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-navy-900/50">or pay with</p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <a
+          href={`${SALON.cashAppUrl}/${amount}`}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-center gap-2 rounded-full bg-[#00d632] px-4 py-3 font-bold text-white transition hover:brightness-95"
+        >
+          $ Cash App {formatUSD(amountCents)}
+        </a>
+        <CopyButton value={SALON.zelle} className="bg-[#6d1ed4] text-white hover:brightness-110">
+          Zelle {SALON.zelle}
+        </CopyButton>
+      </div>
+      <p className="mt-3 text-xs leading-relaxed text-navy-900/70">
+        Cash App: <strong>{SALON.cashApp}</strong> · Zelle: <strong>{SALON.zelle}</strong>. Put your booking code{" "}
+        <CopyButton value={bookingCode} inline>
+          {bookingCode}
+        </CopyButton>{" "}
+        in the payment note, then text a screenshot to{" "}
+        <a href={SALON.smsHref} className="font-semibold text-royal-700 underline">
+          {SALON.phone}
+        </a>{" "}
+        so we can mark your balance as paid.
+      </p>
+    </div>
+  );
+}
+
+function CopyButton({ value, children, className = "", inline = false }: { value: string; children: React.ReactNode; className?: string; inline?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* clipboard unavailable — the value is visible to copy by hand */
+    }
+  };
+  if (inline)
+    return (
+      <button type="button" onClick={copy} title="Copy" className="rounded bg-navy-900/10 px-1.5 py-0.5 font-mono font-bold text-navy-900 hover:bg-gold-300">
+        {copied ? "Copied!" : children}
+      </button>
+    );
+  return (
+    <button type="button" onClick={copy} className={`flex items-center justify-center gap-2 rounded-full px-4 py-3 font-bold transition ${className}`}>
+      {copied ? "Copied — paste in Zelle" : children}
+      {!copied && <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold">Copy</span>}
+    </button>
   );
 }

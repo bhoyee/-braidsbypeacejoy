@@ -36,7 +36,6 @@ It asks for a few things. Press **Enter** to skip any of them; you can re-run th
 | Question | What to enter |
 | --- | --- |
 | Email address for booking alerts | The owner's email |
-| Owner's mobile for text alerts | e.g. `+14106711788` (only used if Twilio is set up later) |
 | Stripe secret key | Stripe → **Developers → API keys** → *Secret key* (`sk_test_…` to test, `sk_live_…` to take real payments). Typing is hidden. |
 | Create mailbox bookings@braidsbypeacejoy.com? | **Y** (it sends the booking confirmations) |
 

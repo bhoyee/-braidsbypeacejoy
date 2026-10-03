@@ -60,12 +60,9 @@ Full setup, day-to-day usage and troubleshooting are in **[DEPLOYMENT.md](DEPLOY
 
 ## Notifications
 
-`src/lib/notifications.ts` sends:
+`src/lib/notifications.ts` sends booking confirmations, payment receipts and 30-minute reminders by **email**, through the cPanel mailbox (SMTP / nodemailer). There's no SMS: there's no free SMS provider in the US.
 
-* email through your cPanel mailbox (SMTP / nodemailer), and
-* SMS through Twilio's REST API.
-
-Each channel is optional: if its credentials are missing, the message is logged and skipped. Notification failures never undo a payment.
+If SMTP isn't configured, messages are logged and skipped. A failed email never undoes a payment.
 
 ## Brand assets
 

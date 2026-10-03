@@ -29,7 +29,7 @@ export default function PrivacyPage() {
         <LegalSection title="How we use it">
           <ul>
             <li>To schedule, confirm and manage your appointment, and to take deposits and balance payments.</li>
-            <li>To send booking confirmations, payment receipts and appointment reminders by email and text message.</li>
+            <li>To send booking confirmations, payment receipts and appointment reminders by email.</li>
             <li>To prepare for your appointment safely — for example, allergy information you share.</li>
             <li>To respond to your questions and keep business and tax records.</li>
           </ul>
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
           <p>We do not sell or rent your personal information. We share it only with services that help us run the business:</p>
           <ul>
             <li>Stripe, to process online payments securely.</li>
-            <li>Our email and SMS providers, to send confirmations and reminders.</li>
+            <li>Our email provider, to send confirmations and reminders.</li>
             <li>Our website hosting providers, which store booking records securely.</li>
           </ul>
           <p>We may also disclose information when required by law.</p>
@@ -55,7 +55,7 @@ export default function PrivacyPage() {
         <LegalSection title="Your choices">
           <ul>
             <li>You can ask us to see, correct or delete the personal information we hold about you, subject to records we must keep by law.</li>
-            <li>You can opt out of reminder messages by telling us, or by replying STOP to text messages.</li>
+            <li>You can opt out of reminder emails at any time by telling us.</li>
           </ul>
         </LegalSection>
 

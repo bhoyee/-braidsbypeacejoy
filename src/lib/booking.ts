@@ -187,7 +187,7 @@ export async function confirmCheckoutSession(session: CheckoutSession): Promise<
   }
 
   if (result.newlyPaid) {
-    // Fire-and-log: a failed SMS/email must never roll back a captured payment.
+    // Fire-and-log: a failed email must never roll back a captured payment.
     await notifyBookingConfirmed(result.booking, result.kind, paidCents).catch((e) => console.error("[notify]", e));
   }
   return { state: "confirmed", booking: result.booking, kind: result.kind, newlyPaid: result.newlyPaid };
