@@ -87,13 +87,10 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-white/10 px-4 py-6 text-center text-xs text-white/50">
-        <p>© {new Date().getFullYear()} Braids by Peace Joy · {SALON.fullAddress} · {SALON.phone}</p>
-        <p className="mt-2">
-          Powered by{" "}
-          <a href="https://giddyhost.com" target="_blank" rel="noopener" className="font-semibold text-gold-300/80 hover:text-gold-300 hover:underline">
-            GiddyHost
-          </a>
-        </p>
+        © {new Date().getFullYear()} Braids by Peace Joy · Powered by{" "}
+        <a href="https://giddyhost.com" target="_blank" rel="noopener" className="font-semibold text-gold-300/80 hover:text-gold-300 hover:underline">
+          GiddyHost
+        </a>
       </div>
     </footer>
   );
