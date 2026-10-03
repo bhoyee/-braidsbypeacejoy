@@ -92,11 +92,11 @@ This creates a migration in `prisma/migrations/` and applies it to your local da
 Every page has a **"Chat with us"** WhatsApp button, and the owner can get a WhatsApp message for every booking, balance payment, 30-minute reminder and auto-refund, on top of the email. Everything is set in `~/bbpj-api/.env`, so you can test with your own number first and switch later without a redeploy.
 
 1. **Get a free CallMeBot key** for the phone that should receive alerts:
-   1. Save **+34 644 51 95 23** in that phone's contacts.
+   1. Save **+34 644 99 26 98** in that phone's contacts.
    2. Send it the WhatsApp message `I allow callmebot to send me messages`.
-   3. It replies with your **API key**.
+   3. Wait up to 2 minutes for a reply with your **API key**. If none arrives, try again after 24 hours.
 
-   Check callmebot.com for the current number and instructions.
+   CallMeBot changes this number from time to time; the current one is on callmebot.com/blog/free-api-whatsapp-messages.
 2. **Edit the settings:** run `nano ~/bbpj-api/.env` and add (or change) these lines:
    ```dotenv
    WHATSAPP_CHAT_NUMBER="14106711788"      # chat button: country code + number, digits only
