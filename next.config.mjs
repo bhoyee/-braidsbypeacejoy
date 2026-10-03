@@ -34,6 +34,12 @@ const nextConfig = {
         ],
       },
       {
+        // The host's LiteSpeed server caches pages; Next marks prerendered pages as
+        // cacheable "for a year". Cap LiteSpeed at 10 minutes (each deploy also purges it).
+        source: "/((?!_next/static|assets).*)",
+        headers: [{ key: "X-LiteSpeed-Cache-Control", value: "public,max-age=600" }],
+      },
+      {
         source: "/assets/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },

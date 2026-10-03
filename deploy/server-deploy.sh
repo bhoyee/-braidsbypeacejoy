@@ -166,11 +166,24 @@ rm -f "$STATE/failed"
 rm -rf "$APP_DIR/.next.old"
 trap - ERR
 
+# Empty the hosting's LiteSpeed page cache so the new release shows immediately.
+purge_page_cache() {
+  local secret
+  secret="$(sed -n 's/^CRON_SECRET="\(.*\)"$/\1/p' "$APP_DIR/.env" | tail -1)"
+  [ -n "$secret" ] || return 0
+  if curl -fsS --max-time 20 -K - "${HEALTH_URL%/api/health}/api/cache/purge" <<<"header = \"Authorization: Bearer $secret\"" >/dev/null 2>&1; then
+    log "🧹 Page cache cleared"
+  else
+    log "⚠️  Could not clear the page cache (pages may take up to 10 minutes to update)"
+  fi
+}
+
 # ── 7. Health check (also wakes the app up) ─────────────────────────────────
 if [ -n "$HEALTH_URL" ]; then
   for _ in $(seq 1 12); do
     if curl -fsS --max-time 20 "$HEALTH_URL" 2>/dev/null | grep -q "\"version\":\"$VERSION\""; then
       log "✅ Live and healthy: ${VERSION:0:7}"
+      purge_page_cache
       exit 0
     fi
     sleep 5
