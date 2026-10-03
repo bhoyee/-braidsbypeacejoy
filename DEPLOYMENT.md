@@ -87,6 +87,32 @@ This creates a migration in `prisma/migrations/` and applies it to your local da
 
 **Server deploy log.** In Terminal: `tail -50 ~/bbpj-deploy/deploy.log`
 
+## WhatsApp: chat button and owner alerts
+
+Every page has a **"Chat with us"** WhatsApp button, and the owner can get a WhatsApp message for every booking, balance payment, 30-minute reminder and auto-refund, on top of the email. Everything is set in `~/bbpj-api/.env`, so you can test with your own number first and switch later without a redeploy.
+
+1. **Get a free CallMeBot key** for the phone that should receive alerts:
+   1. Save **+34 644 51 95 23** in that phone's contacts.
+   2. Send it the WhatsApp message `I allow callmebot to send me messages`.
+   3. It replies with your **API key**.
+
+   Check callmebot.com for the current number and instructions.
+2. **Edit the settings:** run `nano ~/bbpj-api/.env` and add (or change) these lines:
+   ```dotenv
+   WHATSAPP_CHAT_NUMBER="14106711788"      # chat button: country code + number, digits only
+   WHATSAPP_ALERT_NUMBER="+14106711788"    # who receives booking alerts
+   CALLMEBOT_API_KEY="123456"              # the key CallMeBot sent
+   ```
+   Save with **Ctrl+O, Enter, Ctrl+X**.
+3. **Restart the app:** cPanel → *Setup Node.js App* → **Restart**, or run `touch ~/bbpj-api/tmp/restart.txt`.
+4. **Send a test alert:**
+   ```bash
+   S=$(sed -n 's/^CRON_SECRET="\(.*\)"$/\1/p' ~/bbpj-api/.env); curl -s -H "Authorization: Bearer $S" "https://braidsbypeacejoy.com/api/notify/test?channel=whatsapp"; echo
+   ```
+   `{"ok":true,...}` plus a WhatsApp message on the phone means it works. Use `channel=email` to test email alerts the same way.
+
+To switch to Peace Joy's number later, repeat steps 1–3 with her phone. CallMeBot is free and unofficial, so alerts can occasionally be delayed. Email always stays on as well.
+
 ## Troubleshooting
 
 All commands below run in cPanel → **Terminal**.

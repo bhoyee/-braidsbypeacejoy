@@ -35,6 +35,24 @@ export async function sendEmail(to: string, subject: string, html: string, text:
   });
 }
 
+/**
+ * WhatsApp alert to the OWNER via CallMeBot (free; for messaging your own number).
+ * Set WHATSAPP_ALERT_NUMBER (+1...) and CALLMEBOT_API_KEY in .env; otherwise skipped.
+ * Setup: https://www.callmebot.com/blog/free-api-whatsapp-messages/
+ */
+export async function sendWhatsAppAlert(text: string) {
+  const phone = process.env.WHATSAPP_ALERT_NUMBER?.trim();
+  const apikey = process.env.CALLMEBOT_API_KEY?.trim();
+  if (!phone || !apikey) return console.info(`[whatsapp:skipped] ${text.split("\n")[0]}`);
+  const url = `https://api.callmebot.com/whatsapp.php?${new URLSearchParams({ phone, text, apikey })}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
+  const body = await res.text();
+  // CallMeBot answers 200 even for some errors, so check the text too.
+  if (!res.ok || /error|invalid|not\s+allowed|wrong/i.test(body)) {
+    throw new Error(`CallMeBot ${res.status}: ${body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200)}`);
+  }
+}
+
 /** Sends every message, logging failures instead of throwing on the first one. */
 async function dispatch(jobs: Promise<unknown>[]) {
   const results = await Promise.allSettled(jobs);
@@ -134,6 +152,19 @@ export async function notifyBookingConfirmed(b: BookingWithService, kind: "DEPOS
   ];
   if (process.env.ADMIN_EMAIL)
     jobs.push(sendEmail(process.env.ADMIN_EMAIL, adminSubject, emailShell(adminSubject, adminRows, "Logged automatically by the booking system."), adminText));
+  jobs.push(
+    sendWhatsAppAlert(
+      [
+        `💰 *${isDeposit ? "NEW BOOKING" : "BALANCE PAID"}* — ${SALON.name}`,
+        `👤 ${b.clientName} · ${b.clientPhone}`,
+        `💇🏾‍♀️ ${d.service}${d.addOns ? ` + ${d.addOns}` : ""}`,
+        `📅 ${d.date} at ${d.time}`,
+        `💵 Paid ${formatUSD(chargedCents)} · Balance ${d.balance}`,
+        `🔖 Code ${b.bookingCode}`,
+        ...(b.notes ? [`📝 ${b.notes}`] : []),
+      ].join("\n"),
+    ),
+  );
   await dispatch(jobs);
 }
 
@@ -162,6 +193,7 @@ export async function notifyAppointmentReminder(b: BookingWithService) {
   ];
   if (process.env.ADMIN_EMAIL)
     jobs.push(sendEmail(process.env.ADMIN_EMAIL, `⏰ In 30 min: ${b.clientName} — ${d.service}`, emailShell("Upcoming client", [["Client", b.clientName], ["Phone", b.clientPhone], ...rows], ""), adminText));
+  jobs.push(sendWhatsAppAlert(`⏰ *In 30 min:* ${b.clientName} (${b.clientPhone}) — ${d.service} at ${d.time}. Balance ${d.balance}.`));
   await dispatch(jobs);
 }
 
@@ -171,5 +203,6 @@ export async function notifyAdminRefund(b: BookingWithService, cents: number) {
   const msg = `AUTO-REFUND ${formatUSD(cents)}: ${b.clientName} (${b.clientEmail}, ${b.clientPhone}) for ${d.service} ${d.date} ${d.time}, code ${b.bookingCode}. Slot conflict or duplicate payment — please follow up.`;
   const jobs: Promise<unknown>[] = [];
   if (process.env.ADMIN_EMAIL) jobs.push(sendEmail(process.env.ADMIN_EMAIL, "⚠️ Payment auto-refunded", `<p>${esc(msg)}</p>`, msg));
+  jobs.push(sendWhatsAppAlert(`⚠️ ${msg}`));
   await dispatch(jobs);
 }
