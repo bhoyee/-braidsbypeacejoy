@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 /** Floating "Chat on WhatsApp" button. The number is resolved server-side by /api/whatsapp. */
 export function WhatsAppButton() {
   const pathname = usePathname();
+  if (pathname.startsWith("/manage")) return null; // owner area
   return (
     <a
       href={`/api/whatsapp?from=${encodeURIComponent(pathname)}`}

@@ -37,13 +37,30 @@ const nextConfig = {
         // The host's LiteSpeed server caches pages; Next marks prerendered pages as
         // cacheable "for a year". Cap LiteSpeed at 10 minutes for PAGES (each deploy
         // also purges it). API responses are never cached — see the next rule.
-        source: "/((?!_next/static|assets|api).*)",
+        source: "/((?!_next/static|assets|api|manage).*)",
         headers: [{ key: "X-LiteSpeed-Cache-Control", value: "public,max-age=600" }],
       },
       {
         // Live data (availability, balances, payment status, health): never cache.
         source: "/api/:path*",
         headers: [{ key: "X-LiteSpeed-Cache-Control", value: "no-cache" }],
+      },
+      {
+        // Owner area: private client data — never cache anywhere, never index.
+        source: "/manage/:path*",
+        headers: [
+          { key: "X-LiteSpeed-Cache-Control", value: "no-cache" },
+          { key: "Cache-Control", value: "private, no-store" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
+        source: "/manage",
+        headers: [
+          { key: "X-LiteSpeed-Cache-Control", value: "no-cache" },
+          { key: "Cache-Control", value: "private, no-store" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
       },
       {
         source: "/assets/:path*",

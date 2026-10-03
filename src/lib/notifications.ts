@@ -2,7 +2,7 @@ import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import type { Booking, Service } from "@prisma/client";
 import { addOnsSummary } from "./addons";
-import { SALON } from "./config";
+import { DEPOSIT_CENTS, SALON } from "./config";
 import { esc, googleCalendarLink, renderEmail, siteBase, type EmailButton, type EmailRow } from "./email-template";
 import { PREP_CHECKLIST } from "./policies";
 import { formatDuration, formatSalonDate, formatSalonTime, formatUSD } from "./time";
@@ -289,4 +289,48 @@ export async function notifyAdminRefund(b: BookingWithService, cents: number) {
   if (process.env.ADMIN_EMAIL) jobs.push(sendEmail(process.env.ADMIN_EMAIL, "⚠️ Payment auto-refunded — please follow up", html, msg));
   jobs.push(sendWhatsAppAlert(`⚠️ ${msg}`));
   await dispatch(jobs);
+}
+
+/** Owner cancelled the booking (from /manage). */
+export async function notifyBookingCancelled(b: BookingWithService, opts: { refunded: boolean; reason: string }) {
+  const d = details(b);
+  const base = siteBase();
+  const html = renderEmail({
+    preheader: `Your ${d.service} appointment on ${d.date} has been cancelled.`,
+    eyebrow: "Appointment cancelled",
+    title: `Your appointment has been cancelled`,
+    intro: `Hi ${esc(d.firstName)}, your appointment below has been cancelled${opts.reason ? `: <em>${esc(opts.reason)}</em>` : "."}`,
+    highlight: { label: "Booking code", value: b.bookingCode },
+    rows: [
+      { label: "Style", value: d.service },
+      { label: "Was booked for", value: `${d.date} · ${d.time}` },
+      { label: "Deposit", value: opts.refunded ? `${formatUSD(DEPOSIT_CENTS)} refunded` : "Non-refundable (per our policy)", strong: opts.refunded },
+    ],
+    buttons: [{ label: "Book a new appointment", href: `${base}/book`, primary: true }],
+    note: opts.refunded
+      ? "Your deposit has been refunded to your original payment method. Refunds usually appear within 5–10 business days."
+      : `Questions? Call or text <a href="${SALON.phoneHref}" style="color:#1e3a8a">${esc(SALON.phone)}</a>.`,
+  });
+  const text = `Your ${d.service} appointment on ${d.date} at ${d.time} (code ${b.bookingCode}) has been cancelled.${opts.reason ? ` Reason: ${opts.reason}.` : ""} ${opts.refunded ? `Your ${formatUSD(DEPOSIT_CENTS)} deposit has been refunded (5–10 business days).` : "The deposit is non-refundable per our policy."} Book again: ${base}/book`;
+  await dispatch([sendEmail(b.clientEmail, `Appointment cancelled — ${d.service} on ${d.date}`, html, text)]);
+}
+
+/** Owner recorded a Cash App / Zelle / cash payment (from /manage). */
+export async function notifyManualPayment(b: BookingWithService, amountCents: number, methodLabel: string) {
+  const d = details(b);
+  const html = renderEmail({
+    preheader: `Payment of ${formatUSD(amountCents)} received by ${methodLabel}.`,
+    eyebrow: "Payment received",
+    title: d.hasBalance ? `Thank you, ${d.firstName}!` : `You're all paid up, ${d.firstName}! 💛`,
+    intro: `We've received your <strong>${esc(methodLabel)}</strong> payment of <strong>${formatUSD(amountCents)}</strong>.${d.hasBalance ? "" : " Your balance is fully cleared."}`,
+    highlight: { label: "Booking code", value: b.bookingCode },
+    rows: bookingRows(b, d),
+    buttons: [
+      ...(d.hasBalance ? [{ label: `Pay ${d.balance} balance`, href: d.payUrl, primary: true }] : []),
+      { label: "Add to Google Calendar", href: d.calendarUrl },
+      directions,
+    ],
+  });
+  const text = `Payment received: ${formatUSD(amountCents)} by ${methodLabel} for ${d.service} on ${d.date} at ${d.time} (code ${b.bookingCode}). Balance due: ${d.balance}.`;
+  await dispatch([sendEmail(b.clientEmail, `Payment received — ${formatUSD(amountCents)}`, html, text)]);
 }

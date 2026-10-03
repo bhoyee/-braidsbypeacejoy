@@ -18,6 +18,13 @@ enum BookingStatus {
   FULLY_SETTLED // full style price captured — slot is locked
   EXPIRED // checkout abandoned/expired — slot released
   REFUNDED // paid but could not be honoured (e.g. race on the same slot) — refunded automatically
+  CANCELLED // cancelled by the owner — slot released
+}
+
+// What happened at the appointment (set by the owner on /manage).
+enum BookingOutcome {
+  COMPLETED
+  NO_SHOW
 }
 
 enum PaymentKind {
@@ -69,6 +76,12 @@ model Booking {
   stripeSessionId String        @unique // the deposit Checkout Session
   holdExpiresAt   DateTime? // only meaningful while PENDING_DEPOSIT
   reminderSentAt  DateTime?
+  outcome         BookingOutcome?
+  cancelledAt     DateTime?
+  cancelReason    String?       @db.Text
+  depositRefunded Boolean       @default(false)
+  ownerNotes      String?       @db.Text // private; never shown to clients
+  activity        ActivityLog[]
   payments        Payment[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -89,10 +102,42 @@ model Payment {
   status                PaymentStatus @default(PENDING)
   stripeSessionId       String        @unique
   stripePaymentIntentId String?
+  method                String        @default("STRIPE") // STRIPE | CASHAPP | ZELLE | CASH
+  note                  String?
   paidAt                DateTime?
   createdAt             DateTime      @default(now())
 
   @@index([bookingId, kind, status])
+}
+
+// One-time email sign-in links for the owner's /manage page (only the hash is stored).
+model AdminLoginToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+}
+
+// Small key/value store (e.g. the admin session version used for "sign out everywhere").
+model Setting {
+  key   String @id
+  value String @db.Text
+}
+
+// Every change the owner makes on /manage.
+model ActivityLog {
+  id        String   @id @default(uuid())
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  action    String
+  detail    String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([bookingId, createdAt])
 }
 
 // Single-row mutex. `SELECT ... FOR UPDATE` on this row serialises every

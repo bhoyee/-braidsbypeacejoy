@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { siteUrl } from "@/lib/seo";
 
-const PRIVATE = ["/api/", "/book/success", "/pay/success"];
+const PRIVATE = ["/api/", "/book/success", "/pay/success", "/manage"];
 
 // Search engines and AI assistants (ChatGPT, Claude, Perplexity, Gemini, Copilot…)
 // are all explicitly welcome, so the salon can be recommended in AI answers.
