@@ -5,6 +5,7 @@ import type Stripe from "stripe";
 import { findConflict } from "./availability";
 import { addOnsSummary, type AddOnQuote } from "./addons";
 import { CHECKOUT_HOLD_MINUTES } from "./config";
+import { formatUsPhone } from "./phone";
 import { notifyBookingConfirmed, notifyAdminRefund } from "./notifications";
 import { prisma } from "./prisma";
 import { stripe } from "./stripe";
@@ -211,6 +212,11 @@ export async function expireCheckoutSession(sessionId: string) {
 export function lookupFilter(q: string) {
   const query = q.trim();
   if (query.includes("@")) return { clientEmail: query.toLowerCase() };
+  // A US phone number in any format → the (410) 555-0123 format bookings are stored in.
+  const digits = query.replace(/\D/g, "");
+  if (/^[\d\s()+.-]+$/.test(query) && (digits.length === 10 || (digits.length === 11 && digits.startsWith("1")))) {
+    return { clientPhone: formatUsPhone(query) };
+  }
   const code = query.toUpperCase().replace(/\s/g, "");
   return { bookingCode: code.startsWith("PJ-") ? code : `PJ-${code}` };
 }

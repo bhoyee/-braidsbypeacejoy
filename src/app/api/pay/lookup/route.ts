@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q") ?? "";
   if (q.trim().length < 4 || q.length > 191) {
-    return NextResponse.json({ error: "Enter your email address or booking code." }, { status: 400 });
+    return NextResponse.json({ error: "Enter your email, phone number or booking code." }, { status: 400 });
   }
 
   const bookings = await prisma.booking.findMany({

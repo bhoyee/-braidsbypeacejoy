@@ -16,7 +16,7 @@ export function PayLookup({ initialQuery = "" }: { initialQuery?: string }) {
 
   const search = useCallback(async (q: string) => {
     const term = q.trim();
-    if (term.length < 4) return setError("Enter your email address or booking code (e.g. PJ-7K3Q9X).");
+    if (term.length < 4) return setError("Enter your email, phone number or booking code (e.g. PJ-7K3Q9X).");
     setLoading(true);
     setError(null);
     try {
@@ -66,12 +66,12 @@ export function PayLookup({ initialQuery = "" }: { initialQuery?: string }) {
       >
         <label className="flex flex-1 items-center gap-3 px-3">
           <SearchIcon className="shrink-0 text-royal-700" />
-          <span className="sr-only">Email or booking code</span>
+          <span className="sr-only">Email, phone number or booking code</span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Email address or booking code"
-            autoComplete="email"
+            placeholder="Email, phone or booking code"
+            autoComplete="off"
             className="w-full bg-transparent py-3 text-navy-900 outline-none placeholder:text-navy-900/40"
           />
         </label>
@@ -91,7 +91,7 @@ export function PayLookup({ initialQuery = "" }: { initialQuery?: string }) {
           {results.length === 0 ? (
             <p className="rounded-2xl bg-white/10 p-6 text-center text-white/80 ring-1 ring-white/15">
               No outstanding balance found for <strong className="text-gold-300">{searched}</strong>. You may already be fully
-              settled — or try the email you booked with.
+              settled — or try the email or phone number you booked with.
             </p>
           ) : (
             results.map((b) => (

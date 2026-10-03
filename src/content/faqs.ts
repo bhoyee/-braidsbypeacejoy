@@ -66,7 +66,7 @@ export const FAQS: Faq[] = [
   {
     topic: "payments",
     q: "How do I pay the rest of my balance?",
-    a: `Pay online at any time with the email you booked with or your booking code, send it by Cash App (${SALON.cashApp}) or Zelle (${SALON.zelle}) with your booking code in the note, or pay at your appointment.`,
+    a: `Pay online at any time using the email or phone number you booked with, or your booking code; send it by Cash App (${SALON.cashApp}) or Zelle (${SALON.zelle}) with your booking code in the note, or pay at your appointment.`,
     link: { href: "/pay", label: "Pay your balance" },
   },
 
