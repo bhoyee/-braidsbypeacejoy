@@ -59,9 +59,10 @@ cp "${BASH_SOURCE[0]}" "$SELF_COPY" 2>/dev/null || true
 
 # ── 1. Is there a new build? ────────────────────────────────────────────────
 if [ ! -d "$SRC/.git" ]; then
-  git clone --quiet --depth 1 --single-branch --branch "$BRANCH" "$REPO_URL" "$SRC"
+  git -c pack.threads=1 clone --quiet --depth 1 --single-branch --branch "$BRANCH" "$REPO_URL" "$SRC"
 else
-  git -C "$SRC" fetch --quiet --depth 1 origin "$BRANCH"
+  # pack.threads=1: git's unpacking otherwise starts a thread per CPU core.
+  git -C "$SRC" -c pack.threads=1 fetch --quiet --depth 1 origin "$BRANCH"
 fi
 NEW="$(git -C "$SRC" rev-parse FETCH_HEAD 2>/dev/null || git -C "$SRC" rev-parse HEAD)"
 [ "$NEW" = "$(cat "$STATE/deployed" 2>/dev/null || true)" ] && exit 0   # already live
@@ -155,6 +156,11 @@ cp "$SRC/server.js" "$SRC/next.config.mjs" "$SRC/package.json" "$SRC/DEPLOY_VERS
 
 # ── 6. Restart ──────────────────────────────────────────────────────────────
 STEP="restarting the app"
+# Thread caps for the running website (see server.js). NODE_OPTIONS must be set on
+# the app itself because V8 reads it at start-up, before any of our code runs.
+if command -v cloudlinux-selector >/dev/null 2>&1; then
+  cloudlinux-selector set --json --interpreter nodejs --app-root "$(basename "$APP_DIR")"     --env-vars '{"NODE_OPTIONS":"--v8-pool-size=2","UV_THREADPOOL_SIZE":"2","VIPS_CONCURRENCY":"1","TOKIO_WORKER_THREADS":"2"}'     </dev/null >/dev/null 2>&1 || log "⚠️  Could not set the app's thread limits (server.js still applies most of them)"
+fi
 mkdir -p "$APP_DIR/tmp"
 touch "$APP_DIR/tmp/restart.txt"
 if command -v cloudlinux-selector >/dev/null 2>&1; then
