@@ -1,5 +1,5 @@
 import type { Booking } from "@prisma/client";
-import { formatUSD } from "@/lib/time";
+import { formatUSD, ordinal } from "@/lib/time";
 
 const pill = "inline-block rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide";
 
@@ -22,4 +22,10 @@ export function StatusBadges({ b }: { b: Pick<Booking, "paymentStatus" | "outcom
         ))}
     </span>
   );
+}
+
+/** "New client" or "Returning · 3rd visit" — clients are matched by email. */
+export function ClientBadge({ visit }: { visit: number }) {
+  if (visit <= 1) return <span className={`${pill} shrink-0 font-sans bg-sky-100 text-sky-800`}>New client</span>;
+  return <span className={`${pill} shrink-0 font-sans bg-purple-100 text-purple-800`}>★ Returning · {ordinal(visit)} visit</span>;
 }

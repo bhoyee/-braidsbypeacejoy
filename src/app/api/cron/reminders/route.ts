@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { REMINDER_MINUTES_BEFORE } from "@/lib/config";
+import { sendRetentionReminders, sendReviewRequests } from "@/lib/followups";
 import { notifyAppointmentReminder } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
  *
  * Sends the client + admin reminder once an appointment is ≤ 30 minutes away.
  * `reminderSentAt` is claimed atomically, so overlapping runs never double-send.
- * Also sweeps expired checkout holds as housekeeping.
+ * Also sweeps expired checkout holds, and sends follow-ups (src/lib/followups.ts).
  */
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -50,5 +51,12 @@ export async function GET(req: NextRequest) {
     data: { paymentStatus: "EXPIRED", holdExpiresAt: null },
   });
 
-  return NextResponse.json({ ok: true, remindersSent: sent, holdsReleased: swept.count });
+  // Follow-ups (only between 10 AM and 6 PM salon time): review requests and the
+  // 3-month "time for a refresh?" email. A failure here never blocks the reminders above.
+  const [reviews, retention] = await Promise.all([
+    sendReviewRequests(now).catch((e) => (console.error("[cron] review requests", e), 0)),
+    sendRetentionReminders(now).catch((e) => (console.error("[cron] retention", e), 0)),
+  ]);
+
+  return NextResponse.json({ ok: true, remindersSent: sent, holdsReleased: swept.count, reviewRequests: reviews, retentionEmails: retention });
 }

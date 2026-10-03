@@ -105,3 +105,9 @@ export function formatDuration(min: number): string {
 export function formatUSD(cents: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
+
+/** 1 → "1st", 2 → "2nd", 11 → "11th" */
+export function ordinal(n: number): string {
+  const s = n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
+  return `${n}${s}`;
+}

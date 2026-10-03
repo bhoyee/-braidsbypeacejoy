@@ -6,6 +6,8 @@ import { ArrowRightIcon, SearchIcon } from "@/components/icons";
 import { adminConfigured, isAdmin } from "@/lib/admin-auth";
 import { MANAGE_TABS, isDateKey, listBookings, type ManageTab } from "@/lib/manage";
 import { formatSalonDate, formatSalonTime, salonDateKey } from "@/lib/time";
+import { visitNumbers } from "@/lib/clients";
+import { ClientBadge } from "@/components/manage/StatusBadges";
 import { signOutAction, signOutEverywhereAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +42,7 @@ export default async function ManagePage({ searchParams }: { searchParams: SP })
   const page = Math.max(1, Number(sp.page) || 1);
   const date = isDateKey(sp.date) ? sp.date : undefined;
   const data = await listBookings(tab, q, page, date);
+  const visitNo = await visitNumbers(data.items);
   const now = new Date();
 
   // Group the page's bookings under day headings ("Today", "Tomorrow", "Tuesday, October 6").
@@ -170,9 +173,12 @@ export default async function ManagePage({ searchParams }: { searchParams: SP })
                       </p>
                       <div className="min-w-0 flex-1 border-l border-navy-900/10 pl-4">
                         {/* The whole card opens the booking; the quick buttons sit above this link. */}
-                        <Link href={`/manage/b/${b.id}`} className="block truncate font-semibold text-navy-900 after:absolute after:inset-0 after:rounded-2xl">
-                          {b.clientName}
-                        </Link>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Link href={`/manage/b/${b.id}`} className="truncate font-semibold text-navy-900 after:absolute after:inset-0 after:rounded-2xl">
+                            {b.clientName}
+                          </Link>
+                          <ClientBadge visit={visitNo.get(b.id) ?? 1} />
+                        </div>
                         <p className="truncate text-sm text-navy-900/60">
                           {b.service.name} · {b.clientPhone}
                         </p>

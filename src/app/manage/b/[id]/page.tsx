@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CancelForm, NotesForm, OutcomeButtons, RecordPaymentForm } from "@/components/manage/BookingActions";
-import { StatusBadges } from "@/components/manage/StatusBadges";
+import { ClientBadge, StatusBadges } from "@/components/manage/StatusBadges";
 import { addOnsSummary } from "@/lib/addons";
 import { isAdmin } from "@/lib/admin-auth";
+import { clientHistory, isUnsubscribed, visitNumbers } from "@/lib/clients";
 import { getBooking, PAYMENT_METHODS } from "@/lib/manage";
 import { formatDuration, formatSalonDate, formatSalonTime, formatUSD } from "@/lib/time";
 
@@ -22,6 +23,12 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
   const started = b.appointmentAt <= new Date();
   const addOns = addOnsSummary(b);
   const digits = b.clientPhone.replace(/\D/g, "");
+  const [history, visitNo, unsubscribed] = await Promise.all([
+    clientHistory(b.clientEmail),
+    visitNumbers([b]).then((m) => m.get(b.id) ?? 1),
+    isUnsubscribed(b.clientEmail),
+  ]);
+  const others = history.filter((h) => h.id !== b.id);
   const canRefund = b.payments.some((p) => p.kind === "DEPOSIT" && p.status === "PAID" && p.method === "STRIPE" && p.stripePaymentIntentId);
 
   return (
@@ -40,7 +47,10 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
         <div className="braid-texture flex flex-wrap items-start justify-between gap-4 bg-navy-900 p-6 text-white">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-gold-400">{formatSalonDate(b.appointmentAt)}</p>
-            <h1 className="mt-1 font-display text-3xl font-bold">{b.clientName}</h1>
+            <h1 className="mt-1 flex flex-wrap items-center gap-3 font-display text-3xl font-bold">
+              {b.clientName}
+              <ClientBadge visit={visitNo} />
+            </h1>
             <p className="mt-1 text-white/80">
               {formatSalonTime(b.appointmentAt)} · {b.service.name} ({formatDuration(b.service.durationMin)})
             </p>
@@ -96,6 +106,33 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
         <NotesForm id={b.id} notes={b.ownerNotes ?? ""} />
         {active && !b.outcome && <CancelForm id={b.id} canRefund={canRefund} />}
       </div>
+
+      <section className="mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-900/5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-display text-xl text-navy-900">Client history</h2>
+          <p className="text-xs text-navy-900/50">
+            Matched by email · follow-up emails {unsubscribed ? <strong className="text-red-700">unsubscribed</strong> : "on"}
+            {b.reviewRequestSentAt && <> · review request sent {formatSalonDate(b.reviewRequestSentAt).split(",").slice(1).join(",")}</>}
+          </p>
+        </div>
+        {others.length === 0 ? (
+          <p className="mt-2 text-sm text-navy-900/60">First booking with this email — a new client.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-navy-900/5 text-sm">
+            {others.map((h) => (
+              <li key={h.id}>
+                <Link href={`/manage/b/${h.id}`} className="flex flex-wrap items-center justify-between gap-2 py-2 hover:text-royal-700">
+                  <span>
+                    <strong className="text-navy-900">{formatSalonDate(h.appointmentAt)}</strong>
+                    <span className="text-navy-900/60"> · {h.service.name}</span>
+                  </span>
+                  <StatusBadges b={h} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {b.activity.length > 0 && (
         <section className="mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-900/5">

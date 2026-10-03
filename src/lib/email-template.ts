@@ -41,6 +41,7 @@ export type EmailContent = {
   sections?: { title: string; items: string[] }[]; // e.g. "Before your appointment"
   note?: string; // trusted HTML, small print under the card
   signoff?: boolean; // "With love, Peace Joy" (client emails); off for owner alerts
+  unsubscribeUrl?: string; // follow-up emails (reviews, 3-month reminder) carry an opt-out link
 };
 
 function button(b: EmailButton) {
@@ -144,7 +145,11 @@ export function renderEmail(c: EmailContent): string {
       <p style="margin:0"><a href="${esc(SALON.mapsUrl)}" style="color:#ffffff;text-decoration:none">📍 ${esc(SALON.addressLine)} · ${esc(SALON.suite)}</a></p>
       <p style="margin:0"><a href="${SALON.phoneHref}" style="color:#ffffff;text-decoration:none">📞 ${esc(SALON.phone)}</a> &nbsp;·&nbsp; Open daily 8 AM – 7 PM</p>
       <p style="margin:8px 0 0">${socials}</p>
-      <p style="margin:10px 0 0;color:#94a3b8;font-size:11px">You're receiving this email about your appointment with Braids by Peace Joy.
+      <p style="margin:10px 0 0;color:#94a3b8;font-size:11px">${
+        c.unsubscribeUrl
+          ? `You're receiving this because you've visited Braids by Peace Joy. <a href="${esc(c.unsubscribeUrl)}" style="color:#94a3b8">Unsubscribe</a> from follow-up emails.`
+          : "You're receiving this email about your appointment with Braids by Peace Joy."
+        }
         <a href="${base}/policies" style="color:#94a3b8">Booking policies</a> · <a href="${base}/privacy" style="color:#94a3b8">Privacy</a></p>
     </td></tr>
   </table>

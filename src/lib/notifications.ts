@@ -2,10 +2,11 @@ import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import type { Booking, Service } from "@prisma/client";
 import { addOnsSummary } from "./addons";
+import { priorVisits, unsubscribeHeaders, unsubscribeUrl } from "./clients";
 import { DEPOSIT_CENTS, SALON } from "./config";
 import { esc, googleCalendarLink, renderEmail, siteBase, type EmailButton, type EmailRow } from "./email-template";
 import { PREP_CHECKLIST } from "./policies";
-import { formatDuration, formatSalonDate, formatSalonTime, formatUSD } from "./time";
+import { formatDuration, formatSalonDate, formatSalonTime, formatUSD, ordinal } from "./time";
 
 type BookingWithService = Booking & { service: Service };
 
@@ -25,7 +26,7 @@ function getMailer(): Transporter | null {
   return mailer;
 }
 
-export async function sendEmail(to: string, subject: string, html: string, text: string) {
+export async function sendEmail(to: string, subject: string, html: string, text: string, headers?: Record<string, string>) {
   const t = getMailer();
   if (!t) return console.info(`[email:skipped] ${to} — ${subject}`);
   await t.sendMail({
@@ -34,6 +35,7 @@ export async function sendEmail(to: string, subject: string, html: string, text:
     subject,
     html,
     text,
+    headers,
   });
 }
 
@@ -112,13 +114,15 @@ const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
 export async function notifyBookingConfirmed(b: BookingWithService, kind: "DEPOSIT" | "BALANCE", chargedCents: number) {
   const d = details(b);
   const isDeposit = kind === "DEPOSIT";
+  const prior = isDeposit ? await priorVisits(b.clientEmail, b.appointmentAt, b.id) : 0;
+  const clientType = prior ? `Returning client — ${ordinal(prior + 1)} visit` : "New client";
 
   // ── Client ──
   const clientHtml = isDeposit
     ? renderEmail({
         preheader: `Confirmed: ${d.service} on ${d.date} at ${d.time}. Code ${b.bookingCode}.`,
         eyebrow: "Booking confirmed",
-        title: `You're booked, ${d.firstName}! ✨`,
+        title: prior ? `Welcome back, ${d.firstName}! ✨` : `You're booked, ${d.firstName}! ✨`,
         intro: `Your <strong>${formatUSD(chargedCents)}</strong> deposit is in and your appointment slot is locked. We can't wait to see you.`,
         highlight: { label: "Booking code", value: b.bookingCode },
         rows: bookingRows(b, d),
@@ -178,6 +182,7 @@ export async function notifyBookingConfirmed(b: BookingWithService, kind: "DEPOS
     highlight: { label: "Booking code", value: b.bookingCode },
     rows: [
       { label: "Client", value: b.clientName },
+      ...(isDeposit ? [{ label: "Client type", value: clientType }] : []),
       { label: "Phone", value: b.clientPhone },
       { label: "Email", value: b.clientEmail },
       ...(b.notes ? [{ label: "Allergies / notes", value: b.notes }] : []),
@@ -205,6 +210,7 @@ export async function notifyBookingConfirmed(b: BookingWithService, kind: "DEPOS
       [
         `💰 *${isDeposit ? "NEW BOOKING" : "BALANCE PAID"}* — ${SALON.name}`,
         `👤 ${b.clientName} · ${b.clientPhone}`,
+        ...(isDeposit ? [prior ? `⭐ ${clientType}` : "🆕 New client"] : []),
         `💇🏾‍♀️ ${d.service}${d.addOns ? ` + ${d.addOns}` : ""}`,
         `📅 ${d.date} at ${d.time}`,
         `💵 Paid ${formatUSD(chargedCents)} · Balance ${d.balance}`,
@@ -333,4 +339,72 @@ export async function notifyManualPayment(b: BookingWithService, amountCents: nu
   });
   const text = `Payment received: ${formatUSD(amountCents)} by ${methodLabel} for ${d.service} on ${d.date} at ${d.time} (code ${b.bookingCode}). Balance due: ${d.balance}.`;
   await dispatch([sendEmail(b.clientEmail, `Payment received — ${formatUSD(amountCents)}`, html, text)]);
+}
+
+/* ------------------------------------------------------------------ */
+/* Follow-ups (sent by the cron route; clients can unsubscribe)        */
+/* ------------------------------------------------------------------ */
+
+/** "How was your visit?" — asks for a Google review and a social-media tag. */
+export async function notifyReviewRequest(b: BookingWithService) {
+  const d = details(b);
+  const google = process.env.GOOGLE_REVIEW_URL?.trim();
+  const unsub = unsubscribeUrl(b.clientEmail);
+  const html = renderEmail({
+    preheader: `Thank you for visiting, ${d.firstName}! A quick review means the world to us.`,
+    eyebrow: "Thank you for visiting",
+    title: `How do you love your ${d.service}, ${d.firstName}? 💛`,
+    intro:
+      "Thank you for trusting us with your hair! If you enjoyed your visit, a quick review helps other women find us — it only takes a minute.",
+    buttons: [
+      { label: "⭐ Leave a Google review", href: google || SALON.mapsUrl, primary: true },
+      { label: "Tag us on Instagram", href: SALON.socials.instagram },
+      { label: "Tag us on TikTok", href: SALON.socials.tiktok },
+    ],
+    note: `Post a photo of your new look and tag <strong>@braidsbypeacejoy</strong> — we love to share our clients' styles! Anything we could do better? Just reply to this email.`,
+    unsubscribeUrl: unsub,
+  });
+  const text = [
+    `Thank you for visiting, ${d.firstName}!`,
+    "",
+    "If you enjoyed your visit, a quick review helps other women find us:",
+    google || SALON.mapsUrl,
+    "",
+    `Share your new look and tag us on Instagram: ${SALON.socials.instagram}`,
+    `or TikTok: ${SALON.socials.tiktok}`,
+    "",
+    `Unsubscribe from follow-up emails: ${unsub}`,
+  ].join("\n");
+  await sendEmail(b.clientEmail, `How do you love your new ${d.service}? 💛`, html, text, unsubscribeHeaders(b.clientEmail));
+}
+
+/** ~3 months after the last visit: "time for a refresh?" with a link to rebook the same style. */
+export async function notifyRetention(b: BookingWithService) {
+  const d = details(b);
+  const base = siteBase();
+  const unsub = unsubscribeUrl(b.clientEmail);
+  const rebook = `${base}/book?service=${encodeURIComponent(b.service.slug)}`;
+  const html = renderEmail({
+    preheader: `It's been a while since your ${d.service} — ready for a fresh new look?`,
+    eyebrow: "We miss you",
+    title: `Time for a refresh, ${d.firstName}? ✨`,
+    intro: `It's been about 3 months since your <strong>${esc(d.service)}</strong>. Give your hair and edges some love with a fresh install — we'd love to have you back in the chair.`,
+    buttons: [
+      { label: `Book ${d.service} again`, href: rebook, primary: true },
+      { label: "See all styles", href: `${base}/styles` },
+    ],
+    note: `Open daily 8 AM – 7 PM. A ${formatUSD(DEPOSIT_CENTS)} deposit holds your slot. Questions? Call or text <a href="${SALON.smsHref}" style="color:#1e3a8a">${esc(SALON.phone)}</a>.`,
+    unsubscribeUrl: unsub,
+  });
+  const text = [
+    `Time for a refresh, ${d.firstName}?`,
+    "",
+    `It's been about 3 months since your ${d.service}. We'd love to have you back!`,
+    `Book again: ${rebook}`,
+    `See all styles: ${base}/styles`,
+    "",
+    `${SALON.fullAddress} · ${SALON.phone}`,
+    `Unsubscribe from follow-up emails: ${unsub}`,
+  ].join("\n");
+  await sendEmail(b.clientEmail, `Time for a refresh, ${d.firstName}? ✨`, html, text, unsubscribeHeaders(b.clientEmail));
 }
