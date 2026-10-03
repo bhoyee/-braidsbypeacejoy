@@ -32,9 +32,14 @@ mkdir -p "$STATE"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 export PRISMA_HIDE_UPDATE_MESSAGE=1 NPM_CONFIG_UPDATE_NOTIFIER=false NEXT_TELEMETRY_DISABLED=1
-# Prisma's engine starts a thread per CPU core; CloudLinux caps threads per account,
-# which crashes it ("PANIC: timer has gone away"). Two worker threads are plenty.
-export TOKIO_WORKER_THREADS=2
+# Shared hosting (CloudLinux) caps threads per account, but several tools start one
+# thread per CPU core and crash when refused: Prisma's engine ("PANIC: timer has
+# gone away"), esbuild/tsx ("runtime.newosproc"), and Node's own worker pool.
+# Keep all of them small.
+export TOKIO_WORKER_THREADS=2          # Prisma query engine (Rust/tokio)
+export GOMAXPROCS=2                    # esbuild, used by tsx for the style sync (Go)
+export NODE_OPTIONS="--v8-pool-size=2 ${NODE_OPTIONS:-}"   # Node/V8 background threads
+export UV_THREADPOOL_SIZE=2            # Node/libuv file & DNS threads
 
 # Keep the log from growing forever (cron appends to it).
 LOG_FILE="$DEPLOY_HOME/deploy.log"
