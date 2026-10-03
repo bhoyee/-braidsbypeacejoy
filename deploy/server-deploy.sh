@@ -31,6 +31,22 @@ STATE="$DEPLOY_HOME/state"
 mkdir -p "$STATE"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+
+# LiteSpeed runs the app as "lsnode:<app dir>/" processes. A restart starts a NEW
+# process but doesn't always stop the old one, so copies pile up until the account's
+# thread limit is hit (then git, Prisma and even DB connections fail).
+app_pids() { pgrep -f "lsnode:${APP_DIR}/" 2>/dev/null || true; }
+stop_old_app_copies() { # keep only the newest copy running
+  local newest pid n=0
+  newest="$(pgrep -n -f "lsnode:${APP_DIR}/" 2>/dev/null || true)"
+  for pid in $(app_pids); do
+    [ "$pid" = "$newest" ] && continue
+    kill "$pid" 2>/dev/null && n=$((n + 1))
+  done
+  [ "$n" -gt 0 ] && log "🧹 Stopped $n stale copies of the app"
+  return 0
+}
+
 export PRISMA_HIDE_UPDATE_MESSAGE=1 NPM_CONFIG_UPDATE_NOTIFIER=false NEXT_TELEMETRY_DISABLED=1
 # Shared hosting (CloudLinux) caps threads per account, but several tools start one
 # thread per CPU core and crash when refused: Prisma's engine ("PANIC: timer has
@@ -86,6 +102,7 @@ on_error() {
 trap on_error ERR
 
 log "🚀 Deploying ${VERSION:0:7} (build ${NEW:0:7})"
+stop_old_app_copies   # free threads before installing / migrating
 
 # Copy a directory, replacing the destination (rsync if available).
 sync_dir() {
@@ -163,6 +180,11 @@ if command -v cloudlinux-selector >/dev/null 2>&1; then
 fi
 mkdir -p "$APP_DIR/tmp"
 touch "$APP_DIR/tmp/restart.txt"
+# Stop every running copy; LiteSpeed starts one fresh process on the next request
+# (the health check below makes that request).
+for pid in $(app_pids); do kill "$pid" 2>/dev/null || true; done
+sleep 2
+for pid in $(app_pids); do kill -9 "$pid" 2>/dev/null || true; done
 if command -v cloudlinux-selector >/dev/null 2>&1; then
   cloudlinux-selector restart --json --interpreter nodejs --app-root "$(basename "$APP_DIR")" >/dev/null 2>&1 || true
 fi
