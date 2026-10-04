@@ -83,6 +83,10 @@ export function SiteFooter() {
             <Link href="/privacy" className="py-1 hover:text-gold-300">Privacy Policy</Link>
             <Link href="/faq" className="py-1 hover:text-gold-300">FAQ</Link>
             <Link href="/styles" className="py-1 hover:text-gold-300">Style Menu</Link>
+            {/* For the salon owner — signs in to Manage Bookings by email link. */}
+            <Link href="/manage" prefetch={false} rel="nofollow" className="py-1 text-white/50 hover:text-gold-300">
+              Owner login
+            </Link>
           </nav>
         </div>
       </div>
