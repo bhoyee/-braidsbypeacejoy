@@ -232,6 +232,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
       {/* STEP 2 — date & time */}
       {step === 1 && service && (
         <section>
+          <StepBack onClick={() => setStep(0)} />
           <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
             <div>
               <h2 className="font-display text-3xl font-bold text-navy-900">Pick your date &amp; time</h2>
@@ -278,6 +279,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
       {/* STEP 3 — details */}
       {step === 2 && (
         <section className="mx-auto max-w-xl">
+          <StepBack onClick={() => setStep(1)} />
           <h2 className="mb-6 font-display text-3xl font-bold text-navy-900">Your details</h2>
           <form
             className="space-y-5 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-navy-900/10"
@@ -353,6 +355,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
       {/* STEP 4 — review & deposit */}
       {step === 3 && service && startsAt && endTime && (
         <section className="mx-auto max-w-xl">
+          <StepBack onClick={() => setStep(2)} />
           <h2 className="mb-6 font-display text-3xl font-bold text-navy-900">Review &amp; secure your slot</h2>
           <div className="overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-navy-900/10">
             <div className="braid-texture bg-navy-900 p-6 text-white">
@@ -438,5 +441,18 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
       <dt className="text-navy-900/60">{label}</dt>
       <dd className={strong ? "text-lg font-bold text-royal-700" : "font-semibold text-navy-900"}>{value}</dd>
     </div>
+  );
+}
+
+/** "← Back" to the previous booking step. */
+function StepBack({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mb-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-navy-900 ring-1 ring-navy-900/10 transition hover:bg-gold-200/60"
+    >
+      <ArrowLeftIcon width={16} height={16} /> Back
+    </button>
   );
 }

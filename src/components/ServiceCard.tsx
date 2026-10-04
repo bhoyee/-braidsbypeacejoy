@@ -33,14 +33,17 @@ export function ServiceCard({ service, index = 0 }: { service: PublicService; in
         <span className="absolute right-4 top-4 rounded-full bg-navy-950/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur">
           {categoryLabel(service.category)}
         </span>
-        <h3 className="absolute inset-x-4 bottom-4 font-display text-2xl font-semibold leading-tight text-white">{service.name}</h3>
+        <div className="absolute inset-x-4 bottom-4 space-y-2">
+          {service.note && (
+            <p className="inline-block rounded-xl bg-gold-400/95 px-2.5 py-1 text-[11px] font-bold leading-snug text-navy-950 shadow">💡 {service.note}</p>
+          )}
+          <h3 className="font-display text-2xl font-semibold leading-tight text-white">{service.name}</h3>
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col gap-4 p-5">
-        {service.description && <p className="text-sm leading-relaxed text-navy-900/70">{service.description}</p>}
-        {service.note && (
-          <p className="-mt-1 rounded-xl bg-gold-200/50 px-3 py-2 text-xs font-semibold text-navy-900 ring-1 ring-gold-400/50">💡 {service.note}</p>
-        )}
+        {/* Always 3 lines tall, so every card lines up whatever its text. */}
+        <p className="line-clamp-3 min-h-[4.5rem] text-sm leading-6 text-navy-900/70">{service.description}</p>
         <dl className="mt-auto grid grid-cols-2 gap-3 text-sm">
           <div className="rounded-xl bg-cream px-3 py-2">
             <dt className="text-[11px] uppercase tracking-wider text-royal-700/70">Full price</dt>
