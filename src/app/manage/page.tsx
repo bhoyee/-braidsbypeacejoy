@@ -67,7 +67,10 @@ export default async function ManagePage({ searchParams }: { searchParams: SP })
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-royal-700">Owner area</p>
           <h1 className="mt-1 font-display text-3xl font-bold text-navy-900 sm:text-4xl">Manage Bookings</h1>
         </div>
-        <div className="flex gap-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Link href="/manage/alerts" className="rounded-full bg-white px-4 py-2 font-semibold text-navy-900 ring-1 ring-navy-900/15 hover:bg-cream">
+            🔔 Alerts check
+          </Link>
           <form action={signOutAction}>
             <button className="rounded-full bg-red-600 px-4 py-2 font-semibold text-white shadow-sm hover:bg-red-700">Sign out</button>
           </form>

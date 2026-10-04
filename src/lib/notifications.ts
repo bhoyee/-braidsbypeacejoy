@@ -26,9 +26,14 @@ function getMailer(): Transporter | null {
   return mailer;
 }
 
-export async function sendEmail(to: string, subject: string, html: string, text: string, headers?: Record<string, string>) {
+export type Delivery = "sent" | "skipped";
+
+export async function sendEmail(to: string, subject: string, html: string, text: string, headers?: Record<string, string>): Promise<Delivery> {
   const t = getMailer();
-  if (!t) return console.info(`[email:skipped] ${to} — ${subject}`);
+  if (!t) {
+    console.info(`[email:skipped] ${to} — ${subject}`);
+    return "skipped";
+  }
   await t.sendMail({
     from: process.env.EMAIL_FROM ?? `"${SALON.name}" <${process.env.SMTP_USER}>`,
     to,
@@ -37,6 +42,7 @@ export async function sendEmail(to: string, subject: string, html: string, text:
     text,
     headers,
   });
+  return "sent";
 }
 
 /**
@@ -44,10 +50,13 @@ export async function sendEmail(to: string, subject: string, html: string, text:
  * Set WHATSAPP_ALERT_NUMBER (+1...) and CALLMEBOT_API_KEY in .env; otherwise skipped.
  * Setup: https://www.callmebot.com/blog/free-api-whatsapp-messages/
  */
-export async function sendWhatsAppAlert(text: string) {
+export async function sendWhatsAppAlert(text: string): Promise<Delivery> {
   const phone = process.env.WHATSAPP_ALERT_NUMBER?.trim();
   const apikey = process.env.CALLMEBOT_API_KEY?.trim();
-  if (!phone || !apikey) return console.info(`[whatsapp:skipped] ${text.split("\n")[0]}`);
+  if (!phone || !apikey) {
+    console.info(`[whatsapp:skipped] ${text.split("\n")[0]}`);
+    return "skipped";
+  }
   const url = `https://api.callmebot.com/whatsapp.php?${new URLSearchParams({ phone, text, apikey })}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
   const body = await res.text();
@@ -55,12 +64,43 @@ export async function sendWhatsAppAlert(text: string) {
   if (!res.ok || /error|invalid|not\s+allowed|wrong/i.test(body)) {
     throw new Error(`CallMeBot ${res.status}: ${body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200)}`);
   }
+  return "sent";
 }
 
 /** Sends every message, logging failures instead of throwing on the first one. */
 async function dispatch(jobs: Promise<unknown>[]) {
   const results = await Promise.allSettled(jobs);
   for (const r of results) if (r.status === "rejected") console.error("[notify] delivery failed", r.reason);
+}
+
+type Job = { label: string; run: () => Promise<Delivery> };
+
+/** Owner alerts for a booking: email (ADMIN_EMAIL) + WhatsApp (CallMeBot). */
+function ownerJobs(subject: string, html: string, text: string, whatsapp: string): Job[] {
+  const admin = process.env.ADMIN_EMAIL?.trim();
+  return [
+    { label: "Owner email", run: async () => (admin ? sendEmail(admin, subject, html, text) : Promise.reject(new Error("ADMIN_EMAIL is not set"))) },
+    { label: "Owner WhatsApp", run: () => sendWhatsAppAlert(whatsapp) },
+  ];
+}
+
+/**
+ * Sends every message and records what happened on the booking's activity log
+ * (e.g. "Client email ✓ · Owner email ✓ · Owner WhatsApp ✗ CallMeBot 203: APIKey is invalid"),
+ * so delivery problems are visible in Manage Bookings, not only in server logs.
+ */
+async function dispatchLogged(bookingId: string, action: string, jobs: Job[]) {
+  const results = await Promise.allSettled(jobs.map((j) => j.run()));
+  const parts = results.map((r, i) => {
+    const label = jobs[i].label;
+    if (r.status === "rejected") {
+      console.error(`[notify] ${label} failed`, r.reason);
+      return `${label} ✗ ${String((r.reason as Error)?.message ?? r.reason).slice(0, 160)}`;
+    }
+    return r.value === "skipped" ? `${label} – not set up` : `${label} ✓`;
+  });
+  const { prisma } = await import("./prisma");
+  await prisma.activityLog.create({ data: { bookingId, action, detail: parts.join(" · ") } }).catch((e) => console.error("[notify] log", e));
 }
 
 /* ------------------------------------------------------------------ */
@@ -197,30 +237,33 @@ export async function notifyBookingConfirmed(b: BookingWithService, kind: "DEPOS
   });
   const ownerText = `${isDeposit ? "NEW BOOKING" : "BALANCE PAID"}: ${b.clientName} (${b.clientPhone}, ${b.clientEmail}) — ${d.service}, ${d.date} ${d.time}. Paid ${formatUSD(chargedCents)}. Balance ${d.balance}. Code ${b.bookingCode}.${b.notes ? ` Notes: ${b.notes}` : ""}`;
 
-  const jobs: Promise<unknown>[] = [
-    sendEmail(
-      b.clientEmail,
-      isDeposit ? `You're booked! ${d.service} — ${d.date} at ${d.time}` : `Payment received — ${d.service} on ${d.date}`,
-      clientHtml,
-      clientText,
+  await dispatchLogged(b.id, isDeposit ? "Booking alerts sent" : "Payment alerts sent", [
+    {
+      label: "Client email",
+      run: () =>
+        sendEmail(
+          b.clientEmail,
+          isDeposit ? `You're booked! ${d.service} — ${d.date} at ${d.time}` : `Payment received — ${d.service} on ${d.date}`,
+          clientHtml,
+          clientText,
+        ),
+    },
+    ...ownerJobs(
+      ownerSubject,
+      ownerHtml,
+      ownerText,
+        [
+          `💰 *${isDeposit ? "NEW BOOKING" : "BALANCE PAID"}* — ${SALON.name}`,
+          `👤 ${b.clientName} · ${b.clientPhone}`,
+          ...(isDeposit ? [prior ? `⭐ ${clientType}` : "🆕 New client"] : []),
+          `💇🏾‍♀️ ${d.service}${d.addOns ? ` + ${d.addOns}` : ""}`,
+          `📅 ${d.date} at ${d.time}`,
+          `💵 Paid ${formatUSD(chargedCents)} · Balance ${d.balance}`,
+          `🔖 Code ${b.bookingCode}`,
+          ...(b.notes ? [`📝 ${b.notes}`] : []),
+        ].join("\n"),
     ),
-  ];
-  if (process.env.ADMIN_EMAIL) jobs.push(sendEmail(process.env.ADMIN_EMAIL, ownerSubject, ownerHtml, ownerText));
-  jobs.push(
-    sendWhatsAppAlert(
-      [
-        `💰 *${isDeposit ? "NEW BOOKING" : "BALANCE PAID"}* — ${SALON.name}`,
-        `👤 ${b.clientName} · ${b.clientPhone}`,
-        ...(isDeposit ? [prior ? `⭐ ${clientType}` : "🆕 New client"] : []),
-        `💇🏾‍♀️ ${d.service}${d.addOns ? ` + ${d.addOns}` : ""}`,
-        `📅 ${d.date} at ${d.time}`,
-        `💵 Paid ${formatUSD(chargedCents)} · Balance ${d.balance}`,
-        `🔖 Code ${b.bookingCode}`,
-        ...(b.notes ? [`📝 ${b.notes}`] : []),
-      ].join("\n"),
-    ),
-  );
-  await dispatch(jobs);
+  ]);
 }
 
 /**
@@ -326,10 +369,10 @@ export function appointmentReminderEmails(b: BookingWithService, kind: "DAY_BEFO
 
 export async function notifyAppointmentReminder(b: BookingWithService, kind: "DAY_BEFORE" | "SOON") {
   const { client, owner } = appointmentReminderEmails(b, kind);
-  const jobs: Promise<unknown>[] = [sendEmail(b.clientEmail, client.subject, client.html, client.text)];
-  if (process.env.ADMIN_EMAIL) jobs.push(sendEmail(process.env.ADMIN_EMAIL, owner.subject, owner.html, owner.text));
-  jobs.push(sendWhatsAppAlert(owner.whatsapp));
-  await dispatch(jobs);
+  await dispatchLogged(b.id, kind === "DAY_BEFORE" ? "24-hour reminder alerts" : "2-hour reminder alerts", [
+    { label: "Client email", run: () => sendEmail(b.clientEmail, client.subject, client.html, client.text) },
+    ...ownerJobs(owner.subject, owner.html, owner.text, owner.whatsapp),
+  ]);
 }
 
 /** A payment arrived that could not be honoured and was auto-refunded (owner only). */

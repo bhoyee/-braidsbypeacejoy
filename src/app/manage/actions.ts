@@ -11,6 +11,7 @@ import {
   startSession,
 } from "@/lib/admin-auth";
 import { cancelBooking, recordPayment, rescheduleBooking, rescheduleSlots, saveNotes, setOutcome } from "@/lib/manage";
+import { sendEmail, sendWhatsAppAlert } from "@/lib/notifications";
 
 // Server actions for /manage. Next.js only accepts these from this site's own pages
 // (Origin check), and every booking action re-checks the owner session.
@@ -90,4 +91,25 @@ export async function rescheduleAction(_prev: ActionState, form: FormData): Prom
   await requireAdmin();
   const id = String(form.get("id"));
   return done(id, await rescheduleBooking(id, String(form.get("startsAt") ?? ""), form.get("notify") === "on"));
+}
+
+/** Alerts check: send a test to the owner's email or WhatsApp and report the exact result. */
+export async function testAlertAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const channel = String(form.get("channel"));
+  const stamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+  try {
+    if (channel === "email") {
+      const to = process.env.ADMIN_EMAIL?.trim();
+      if (!to) return { ok: false, error: "ADMIN_EMAIL is not set in the server .env." };
+      const r = await sendEmail(to, "✅ Test alert — Braids by Peace Joy", `<p>Email alerts are working (${stamp}).</p>`, `Email alerts are working (${stamp}).`);
+      if (r === "skipped") return { ok: false, error: "Email isn't set up: SMTP_HOST is missing from the server .env." };
+      return { ok: true, message: `Test email sent to ${to}. If it doesn't arrive in a minute, check Spam/Junk.` };
+    }
+    const r = await sendWhatsAppAlert(`✅ Test alert — Braids by Peace Joy\nWhatsApp booking alerts are working (${stamp}).`);
+    if (r === "skipped") return { ok: false, error: "WhatsApp isn't set up: WHATSAPP_ALERT_NUMBER or CALLMEBOT_API_KEY is missing from the server .env." };
+    return { ok: true, message: "CallMeBot accepted the message. It usually arrives within a minute (sometimes a few)." };
+  } catch (err) {
+    return { ok: false, error: `Failed: ${(err as Error).message}` };
+  }
 }
