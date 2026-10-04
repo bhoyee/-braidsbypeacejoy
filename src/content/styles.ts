@@ -208,12 +208,13 @@ export const STYLES: StyleEntry[] = [
   // ── Cornrows & stitch ─────────────────────────────────────────────────
   {
     slug: "fulani-braids",
-    name: "Tribal / Fulani Braids",
+    name: "Tribal / Fulani Braids (Mid-back)",
     category: "cornrows",
-    priceCents: 24000,
+    priceCents: 20000,
     durationMin: 240,
     imageUrl: "/assets/styles/fulani-braids.jpg",
     popular: true,
+    note: "Extra $20 for longer length.",
     description: "Iconic cornrow-and-braid pattern with optional beads and cuffs.",
   },
   {
