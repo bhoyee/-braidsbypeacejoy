@@ -132,6 +132,12 @@ env_default() {
 }
 env_default RETENTION_STEPS "60,90,120" # days after the last visit for the 3 "come back" emails
 sed -i "/^RETENTION_DAYS=/d" .env       # replaced by RETENTION_STEPS
+# The "Chat with us" button: the salon's own WhatsApp (replaces the number used for testing).
+if ! grep -q '^WHATSAPP_CHAT_NUMBER=' .env || grep -q '^WHATSAPP_CHAT_NUMBER=.*447776735799' .env; then
+  sed -i '/^WHATSAPP_CHAT_NUMBER=/d' .env
+  printf 'WHATSAPP_CHAT_NUMBER="+14106711788"\n' >> .env
+  log "Set WHATSAPP_CHAT_NUMBER to the salon's WhatsApp (+1 410-671-1788)"
+fi
 env_default GOOGLE_REVIEW_URL ""        # optional override; empty = built-in link to the salon's Google review form
 
 # ── 3. Database schema + packages ───────────────────────────────────────────
