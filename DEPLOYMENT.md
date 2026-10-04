@@ -146,7 +146,7 @@ The server is in London, so US visitors get a slight delay. Two ways to fix it:
 
 Sent by the every-minute reminders cron, only between 10 AM and 6 PM salon time:
 
-- **Review request** — after the owner marks a visit *Completed* (or 24 hours after it ends if never marked; never for no-shows). Buttons: Google review, Instagram, TikTok. Add the Google link to `.env` as `GOOGLE_REVIEW_URL="https://g.page/r/…/review"` (Google Business Profile → *Ask for reviews*); until then the button opens Google Maps.
+- **Review request** — after a visit is *Completed* — tapped by the owner, or automatically 24 hours after the appointment ends if the owner never marks it (it can still be switched to No-show later). Never for no-shows. Buttons: Google review, Instagram, TikTok. Each deploy adds `RETENTION_DAYS="90"` and an empty `GOOGLE_REVIEW_URL=""` to the server `.env` if they are missing (existing values are never changed). Put the Google link in `GOOGLE_REVIEW_URL="https://g.page/r/…/review"` (Google Business Profile → *Ask for reviews*); until then the button opens Google Maps.
 - **"Time for a refresh?"** — `RETENTION_DAYS` (default 90) after a client's last visit, if they haven't booked again. Links straight to booking the same style.
 - Clients are recognised by email: Manage Bookings shows *New client* / *Returning · 3rd visit* and each booking's client history.
 - Every follow-up email has an unsubscribe link (`/unsubscribe`). Booking confirmations and appointment reminders are always sent.

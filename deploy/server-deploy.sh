@@ -124,6 +124,15 @@ mkdir -p "$APP_DIR"
 cd "$APP_DIR"
 [ -f .env ] || { log "Missing $APP_DIR/.env — create it from DEPLOYMENT.md first."; false; }
 
+# Settings added by newer releases: append any that are missing, with their default.
+# Values already in .env are never changed — edit .env to customise them.
+env_default() {
+  [ -z "$(tail -c1 .env)" ] || echo >> .env # make sure the last line ends with a newline
+  grep -q "^$1=" .env || { printf '%s="%s"\n' "$1" "$2" >> .env; log "Added $1 to .env (default: \"$2\")"; }
+}
+env_default RETENTION_DAYS "90"         # days after the last visit before the "time for a refresh?" email
+env_default GOOGLE_REVIEW_URL ""        # Google Business Profile → "Ask for reviews" link; empty = Google Maps
+
 # ── 3. Database schema + packages ───────────────────────────────────────────
 # CloudLinux keeps packages in the Node environment ($VENV/lib/node_modules) and
 # links <app>/node_modules to it. Like cPanel's own "Run NPM Install", we install

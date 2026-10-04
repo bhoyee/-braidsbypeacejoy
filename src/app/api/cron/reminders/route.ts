@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { REMINDER_MINUTES_BEFORE } from "@/lib/config";
-import { sendRetentionReminders, sendReviewRequests } from "@/lib/followups";
+import { autoCompleteVisits, sendRetentionReminders, sendReviewRequests } from "@/lib/followups";
 import { notifyAppointmentReminder } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 
@@ -53,10 +53,11 @@ export async function GET(req: NextRequest) {
 
   // Follow-ups (only between 10 AM and 6 PM salon time): review requests and the
   // 3-month "time for a refresh?" email. A failure here never blocks the reminders above.
+  const autoCompleted = await autoCompleteVisits(now).catch((e) => (console.error("[cron] auto-complete", e), 0));
   const [reviews, retention] = await Promise.all([
     sendReviewRequests(now).catch((e) => (console.error("[cron] review requests", e), 0)),
     sendRetentionReminders(now).catch((e) => (console.error("[cron] retention", e), 0)),
   ]);
 
-  return NextResponse.json({ ok: true, remindersSent: sent, holdsReleased: swept.count, reviewRequests: reviews, retentionEmails: retention });
+  return NextResponse.json({ ok: true, remindersSent: sent, holdsReleased: swept.count, autoCompleted, reviewRequests: reviews, retentionEmails: retention });
 }

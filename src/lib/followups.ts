@@ -26,9 +26,29 @@ async function unsubscribed(emails: string[]) {
 }
 
 /**
- * Review request: once the owner marks the visit Completed (next civil-hour run),
- * or 24 hours after the appointment ends if it was never marked. Never for no-shows,
- * cancellations, or appointments that ended more than a week ago.
+ * Appointments the owner never marked are treated as Completed 24 hours after they
+ * end. The owner can still change it to No-show afterwards in Manage Bookings.
+ */
+export async function autoCompleteVisits(now = new Date()) {
+  const due = await prisma.booking.findMany({
+    where: { paymentStatus: { in: ["DEPOSIT_PAID", "FULLY_SETTLED"] }, outcome: null, endAt: { lte: new Date(now.getTime() - DAY) } },
+    select: { id: true },
+    take: 100,
+  });
+  let done = 0;
+  for (const { id } of due) {
+    const claim = await prisma.booking.updateMany({ where: { id, outcome: null }, data: { outcome: "COMPLETED" } });
+    if (claim.count !== 1) continue; // the owner (or another run) just marked it
+    await prisma.activityLog.create({ data: { bookingId: id, action: "Marked completed automatically", detail: "Not marked within 24 hours — change to No-show if they didn't come" } });
+    done++;
+  }
+  return done;
+}
+
+/**
+ * Review request: once the visit is Completed (tapped by the owner, or automatically
+ * 24 hours after it ends). Never for no-shows, cancellations, or visits that ended
+ * more than a week ago.
  */
 export async function sendReviewRequests(now = new Date()) {
   if (!civilHour(now)) return 0;
@@ -36,11 +56,8 @@ export async function sendReviewRequests(now = new Date()) {
     where: {
       paymentStatus: { in: ["DEPOSIT_PAID", "FULLY_SETTLED"] },
       reviewRequestSentAt: null,
-      endAt: { gt: new Date(now.getTime() - 7 * DAY) },
-      OR: [
-        { outcome: "COMPLETED", endAt: { lte: now } },
-        { outcome: null, endAt: { lte: new Date(now.getTime() - DAY) } },
-      ],
+      outcome: "COMPLETED",
+      endAt: { gt: new Date(now.getTime() - 7 * DAY), lte: now },
     },
     include: { service: true },
     orderBy: { endAt: "asc" },
