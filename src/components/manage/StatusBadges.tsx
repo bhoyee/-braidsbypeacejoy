@@ -18,7 +18,7 @@ export function StatusBadges({ b }: { b: Pick<Booking, "paymentStatus" | "outcom
         (balance > 0 ? (
           <span className={`${pill} bg-gold-200 text-navy-900`}>Owes {formatUSD(balance)}</span>
         ) : (
-          <span className={`${pill} bg-royal-700/10 text-royal-700`}>Paid in full</span>
+          <span className={`${pill} bg-green-600 text-white`}>✓ Paid in full</span>
         ))}
     </span>
   );
