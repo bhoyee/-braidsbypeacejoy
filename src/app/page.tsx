@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AnchorLink } from "@/components/AnchorLink";
 import { Faq } from "@/components/Faq";
 import { HeroVideo } from "@/components/HeroVideo";
-import { ServiceCard } from "@/components/ServiceCard";
+import { HomeStyles } from "@/components/HomeStyles";
 import { StudioTour } from "@/components/StudioTour";
 import {
   ArrowRightIcon,
@@ -16,7 +16,6 @@ import {
   SparkleIcon,
 } from "@/components/icons";
 import { SALON } from "@/lib/config";
-import { categoryTabs, popularStyles, stylesHref } from "@/lib/catalog";
 import { PREP_CHECKLIST } from "@/lib/policies";
 import { buildHomeJsonLd } from "@/lib/seo";
 import { getServices } from "@/lib/services";
@@ -117,48 +116,12 @@ export default async function HomePage() {
             <h2 className="mt-3 font-display text-4xl font-bold text-navy-900 sm:text-5xl">Popular Styles</h2>
             <div className="gold-rule mx-auto mt-6 w-40" />
             <p className="mt-6 text-navy-900/70">
-              Our most-booked looks, with the full price and appointment time upfront. Browse every style by category on the full menu.
+              Our most-booked looks, with the full price and appointment time upfront. Tap a category to browse it right here.
             </p>
           </div>
 
-          {/* Quick links into each category of the full menu */}
-          {services.length > 0 && (
-            <div className="-mx-4 mb-10 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <ul className="mx-auto flex w-max gap-2">
-                {categoryTabs(services).slice(1).map((c) => (
-                  <li key={c.id}>
-                    <Link
-                      href={stylesHref({ category: c.id })}
-                      className="block whitespace-nowrap rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-navy-900 ring-1 ring-navy-900/10 transition hover:bg-royal-700 hover:text-white"
-                    >
-                      {c.label} <span className="text-navy-900/40">· {c.count}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           {services.length ? (
-            <>
-              {/* Phones & tablets: one swipeable row. Desktop: 2 rows of 4. */}
-              <div className="-mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-4 [scrollbar-width:none] lg:mx-0 lg:grid lg:snap-none lg:grid-cols-4 lg:gap-8 lg:overflow-visible lg:px-0 lg:pb-0 [&::-webkit-scrollbar]:hidden">
-                {popularStyles(services).map((s, i) => (
-                  <div key={s.id} className="w-[78%] max-w-[320px] shrink-0 snap-start sm:w-[45%] lg:w-auto lg:max-w-none">
-                    <ServiceCard service={s} index={i} />
-                  </div>
-                ))}
-              </div>
-              <p className="mt-2 text-center text-xs text-navy-900/50 lg:hidden">Swipe to see more →</p>
-              <div className="mt-10 text-center">
-                <Link
-                  href="/styles"
-                  className="inline-flex items-center gap-2 rounded-full bg-royal-700 px-8 py-4 font-semibold text-white shadow-lg shadow-royal-700/30 transition hover:bg-navy-900"
-                >
-                  View all {services.length} styles <ArrowRightIcon width={18} height={18} />
-                </Link>
-              </div>
-            </>
+            <HomeStyles services={services} />
           ) : (
             <p className="rounded-2xl bg-white p-10 text-center text-navy-900/70 shadow">
               Our style menu is being refreshed. Please check back shortly or{" "}
