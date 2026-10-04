@@ -31,6 +31,9 @@ export const CrownIcon = (p: SVGProps<SVGSVGElement>) => (
 export const ArrowRightIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
 );
+export const ArrowLeftIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+);
 export const ChevronLeftIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}><path d="m15 6-6 6 6 6" /></svg>
 );

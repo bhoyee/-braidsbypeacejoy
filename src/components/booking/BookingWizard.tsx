@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NO_ADDONS, asHairPolicy, normalizeAddOns, quoteAddOns, type AddOnSelection } from "@/lib/addons";
 import { formatUsPhone, isValidUsPhone, usPhoneDigits } from "@/lib/phone";
@@ -7,7 +8,7 @@ import type { Slot } from "@/lib/availability";
 import { DEPOSIT_CENTS, MAX_DAYS_AHEAD } from "@/lib/config";
 import type { PublicService } from "@/lib/services";
 import { addDaysToKey, formatDuration, formatSalonDate, formatSalonTime, formatUSD, salonDateKey } from "@/lib/time";
-import { CardIcon, CheckIcon, ClockIcon, ShieldIcon } from "../icons";
+import { ArrowLeftIcon, CardIcon, CheckIcon, ClockIcon, ShieldIcon } from "../icons";
 import { Calendar } from "./Calendar";
 import { StyleCustomizer } from "./StyleCustomizer";
 import { StylePicker } from "./StylePicker";
@@ -27,6 +28,9 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
   const preselected = services.find((s) => s.slug === initialServiceSlug);
 
   const [step, setStep] = useState(0);
+  // Arriving from a style's "Book" button: show just that style (the full list is one tap away).
+  const [showPicker, setShowPicker] = useState(!preselected);
+  const router = useRouter();
   const [serviceId, setServiceId] = useState<string | null>(preselected?.id ?? null);
   const [dateKey, setDateKey] = useState<string | null>(null);
   const [startsAt, setStartsAt] = useState<string | null>(null);
@@ -185,8 +189,34 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
         })}
       </ol>
 
-      {/* STEP 1 — style */}
-      {step === 0 && (
+      {/* STEP 1 — style (only the chosen one when arriving from a style's Book button) */}
+      {step === 0 && !showPicker && service && (
+        <section>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                // Back to the previous page; if there is none (opened in a new tab), the style menu.
+                if (window.history.length > 1) router.back();
+                else router.push("/styles");
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-navy-900 ring-1 ring-navy-900/10 transition hover:bg-gold-200/60"
+            >
+              <ArrowLeftIcon width={16} height={16} /> Back
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPicker(true)}
+              className="text-sm font-semibold text-royal-700 underline-offset-4 hover:underline"
+            >
+              Change style
+            </button>
+          </div>
+          <StyleCustomizer service={service} value={chosenAddOns} quote={quote} onChange={setAddOns} onContinue={() => setStep(1)} />
+        </section>
+      )}
+
+      {step === 0 && (showPicker || !service) && (
         <section>
           <h2 className="mb-6 font-display text-3xl font-bold text-navy-900">Select your style</h2>
           {services.length === 0 && <p className="text-navy-900/60">No styles are available right now — please check back soon.</p>}
