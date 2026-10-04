@@ -346,7 +346,7 @@ export async function notifyManualPayment(b: BookingWithService, amountCents: nu
 /* ------------------------------------------------------------------ */
 
 /** "How was your visit?" — asks for a Google review and a social-media tag. */
-export async function notifyReviewRequest(b: BookingWithService) {
+export function reviewRequestEmail(b: BookingWithService) {
   const d = details(b);
   const google = process.env.GOOGLE_REVIEW_URL?.trim() || SALON.googleReviewUrl;
   const unsub = unsubscribeUrl(b.clientEmail);
@@ -375,36 +375,86 @@ export async function notifyReviewRequest(b: BookingWithService) {
     "",
     `Unsubscribe from follow-up emails: ${unsub}`,
   ].join("\n");
-  await sendEmail(b.clientEmail, `How do you love your new ${d.service}? 💛`, html, text, unsubscribeHeaders(b.clientEmail));
+  return { subject: `How do you love your new ${d.service}? 💛`, html, text };
 }
 
-/** ~3 months after the last visit: "time for a refresh?" with a link to rebook the same style. */
-export async function notifyRetention(b: BookingWithService) {
+export async function notifyReviewRequest(b: BookingWithService) {
+  const m = reviewRequestEmail(b);
+  await sendEmail(b.clientEmail, m.subject, m.html, m.text, unsubscribeHeaders(b.clientEmail));
+}
+
+/**
+ * "Come back" sequence after the last visit (see src/lib/followups.ts):
+ * step 1 ≈ 2 months, step 2 ≈ 3 months, step 3 ≈ 4 months (the last one).
+ * Every email links straight to booking the same style again.
+ */
+export function retentionEmail(b: BookingWithService, step: 1 | 2 | 3 = 2, months = 3) {
   const d = details(b);
   const base = siteBase();
   const unsub = unsubscribeUrl(b.clientEmail);
   const rebook = `${base}/book?service=${encodeURIComponent(b.service.slug)}`;
+  const since = `about ${months} month${months === 1 ? "" : "s"}`;
+  const style = `<strong>${esc(d.service)}</strong>`;
+
+  const copy = {
+    1: {
+      subject: `Ready for your next look, ${d.firstName}? ✨`,
+      preheader: `It's been ${since} since your ${d.service} — book your next appointment before your favorite times are taken.`,
+      eyebrow: "Time for your next install",
+      title: `Ready for your next look, ${d.firstName}? ✨`,
+      intro: `It's been ${since} since your ${style}. To keep your hair and edges healthy, most braids are best taken down around 6–8 weeks — so now is the perfect time to book your next appointment and get the day and time you want.`,
+      textIntro: `It's been ${since} since your ${d.service}. Most braids are best taken down around 6–8 weeks, so now is a great time to book your next appointment.`,
+      last: false,
+    },
+    2: {
+      subject: `Time for a refresh, ${d.firstName}? ✨`,
+      preheader: `It's been ${since} since your ${d.service} — ready for a fresh new look?`,
+      eyebrow: "Time for a refresh",
+      title: `Time for a refresh, ${d.firstName}? ✨`,
+      intro: `It's been ${since} since your ${style}. Give your hair and edges some love with a fresh install — we'd love to have you back in the chair.`,
+      textIntro: `It's been ${since} since your ${d.service}. We'd love to have you back in the chair!`,
+      last: false,
+    },
+    3: {
+      subject: `We miss you, ${d.firstName} 💛`,
+      preheader: `It's been ${since} — your chair is waiting whenever you're ready.`,
+      eyebrow: "We miss you",
+      title: `We miss you, ${d.firstName} 💛`,
+      intro: `It's been ${since} since we last did your hair, and we'd love to see you again. Whenever you're ready, your chair is waiting — booking online takes less than a minute.`,
+      textIntro: `It's been ${since} since we last did your hair, and we'd love to see you again. Whenever you're ready, your chair is waiting.`,
+      last: true,
+    },
+  }[step];
+
   const html = renderEmail({
-    preheader: `It's been a while since your ${d.service} — ready for a fresh new look?`,
-    eyebrow: "We miss you",
-    title: `Time for a refresh, ${d.firstName}? ✨`,
-    intro: `It's been about 3 months since your <strong>${esc(d.service)}</strong>. Give your hair and edges some love with a fresh install — we'd love to have you back in the chair.`,
+    preheader: copy.preheader,
+    eyebrow: copy.eyebrow,
+    title: copy.title,
+    intro: copy.intro,
     buttons: [
       { label: `Book ${d.service} again`, href: rebook, primary: true },
       { label: "See all styles", href: `${base}/styles` },
     ],
-    note: `Open daily 8 AM – 7 PM. A ${formatUSD(DEPOSIT_CENTS)} deposit holds your slot. Questions? Call or text <a href="${SALON.smsHref}" style="color:#1e3a8a">${esc(SALON.phone)}</a>.`,
+    note: `Open daily 8 AM – 7 PM. A ${formatUSD(DEPOSIT_CENTS)} deposit holds your slot. Questions? Call or text <a href="${SALON.smsHref}" style="color:#1e3a8a;white-space:nowrap">${esc(SALON.phone)}</a>.${
+      copy.last ? "<br><br>This is our last reminder — we won't email you about this again." : ""
+    }`,
     unsubscribeUrl: unsub,
   });
   const text = [
-    `Time for a refresh, ${d.firstName}?`,
+    copy.title.replace(/ [✨💛]$/u, ""),
     "",
-    `It's been about 3 months since your ${d.service}. We'd love to have you back!`,
+    copy.textIntro,
     `Book again: ${rebook}`,
     `See all styles: ${base}/styles`,
+    ...(copy.last ? ["", "This is our last reminder — we won't email you about this again."] : []),
     "",
     `${SALON.fullAddress} · ${SALON.phone}`,
     `Unsubscribe from follow-up emails: ${unsub}`,
   ].join("\n");
-  await sendEmail(b.clientEmail, `Time for a refresh, ${d.firstName}? ✨`, html, text, unsubscribeHeaders(b.clientEmail));
+  return { subject: copy.subject, html, text };
+}
+
+export async function notifyRetention(b: BookingWithService, step: 1 | 2 | 3, months: number) {
+  const m = retentionEmail(b, step, months);
+  await sendEmail(b.clientEmail, m.subject, m.html, m.text, unsubscribeHeaders(b.clientEmail));
 }

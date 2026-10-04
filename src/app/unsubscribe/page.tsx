@@ -39,8 +39,8 @@ export default async function UnsubscribePage({ searchParams }: { searchParams: 
             </h1>
             <p className="mt-3 text-sm text-navy-900/70">
               {off
-                ? <>We won&apos;t send review requests or &ldquo;time for a refresh&rdquo; reminders to <strong>{e}</strong>. You&apos;ll still get confirmations and reminders for appointments you book.</>
-                : <>Stop review requests and &ldquo;time for a refresh&rdquo; reminders to <strong>{e}</strong>? You&apos;ll still get confirmations and reminders for appointments you book.</>}
+                ? <>We won&apos;t send review requests or reminders to book again to <strong>{e}</strong>. You&apos;ll still get confirmations and reminders for appointments you book.</>
+                : <>Stop review requests and reminders to book again to <strong>{e}</strong>? You&apos;ll still get confirmations and reminders for appointments you book.</>}
             </p>
             <form action={update} className="mt-6">
               <input type="hidden" name="e" value={e} />

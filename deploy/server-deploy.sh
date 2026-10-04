@@ -130,7 +130,8 @@ env_default() {
   [ -z "$(tail -c1 .env)" ] || echo >> .env # make sure the last line ends with a newline
   grep -q "^$1=" .env || { printf '%s="%s"\n' "$1" "$2" >> .env; log "Added $1 to .env (default: \"$2\")"; }
 }
-env_default RETENTION_DAYS "90"         # days after the last visit before the "time for a refresh?" email
+env_default RETENTION_STEPS "60,90,120" # days after the last visit for the 3 "come back" emails
+sed -i "/^RETENTION_DAYS=/d" .env       # replaced by RETENTION_STEPS
 env_default GOOGLE_REVIEW_URL ""        # optional override; empty = built-in link to the salon's Google review form
 
 # ── 3. Database schema + packages ───────────────────────────────────────────

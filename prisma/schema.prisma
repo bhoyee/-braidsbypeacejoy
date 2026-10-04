@@ -153,8 +153,10 @@ model SchedulerLock {
 
 /// One row per client email: marketing-email preferences and follow-up history.
 model EmailContact {
-  email           String    @id // lower-cased
-  unsubscribedAt  DateTime? // no review / "time for a refresh" emails after this
-  lastRetentionAt DateTime? // last 3-month "time for a refresh" email
-  updatedAt       DateTime  @updatedAt
+  email            String    @id // lower-cased
+  unsubscribedAt   DateTime? // no review / "time for a refresh" emails after this
+  lastRetentionAt  DateTime? // when the last "come back" email went out
+  retentionStep    Int       @default(0) // how many "come back" emails were sent for retentionVisitAt (max 3)
+  retentionVisitAt DateTime? // the visit that sequence is about; a newer visit starts it again
+  updatedAt        DateTime  @updatedAt
 }

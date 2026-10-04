@@ -3,14 +3,21 @@ import { VISIT_WHERE } from "./clients";
 import { notifyRetention, notifyReviewRequest } from "./notifications";
 import { prisma } from "./prisma";
 import { salonMinuteOfDay } from "./time";
+import { usPhoneDigits } from "./phone";
 
 // Follow-up emails, run from the every-minute cron route. Each send is claimed
 // atomically first, so overlapping runs never email anyone twice.
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
-/** Days after the last visit before the "time for a refresh?" email (default 90 ≈ 3 months). */
-const RETENTION_DAYS = Number(process.env.RETENTION_DAYS) || 90;
+/**
+ * "Come back" emails: days after the last visit for each of the 3 emails
+ * (default 2, 3 and 4 months). Set RETENTION_STEPS="60,90,120" in .env to change.
+ */
+export const RETENTION_STEPS = (() => {
+  const days = (process.env.RETENTION_STEPS ?? "").split(",").map((d) => Number(d.trim())).filter((d) => d > 0);
+  return days.length === 3 ? days.sort((a, b) => a - b) : [60, 90, 120];
+})();
 const PER_RUN = 5; // gentle on the mail server
 
 /** Only email clients at a civil hour, salon time (10 AM – 6 PM). */
@@ -86,52 +93,80 @@ export async function sendReviewRequests(now = new Date()) {
 }
 
 /**
- * "Time for a refresh?": clients whose most recent visit was RETENTION_DAYS ago
- * (up to 30 days later, so old history never gets a burst of emails), with nothing
- * booked since, and not already reminded since that visit.
+ * "Come back" sequence: up to 3 emails (RETENTION_STEPS, default 2, 3 and 4 months
+ * after the last visit). It stops as soon as the client books again with the same
+ * email OR the same phone number, or unsubscribes. A new visit starts a fresh sequence.
  */
 export async function sendRetentionReminders(now = new Date()) {
   if (!civilHour(now)) return 0;
-  const due = new Date(now.getTime() - RETENTION_DAYS * DAY);
-  const oldest = new Date(due.getTime() - 30 * DAY);
+  const [first, , last] = RETENTION_STEPS;
+  const newest = new Date(now.getTime() - first * DAY);
+  const oldest = new Date(now.getTime() - (last + 30) * DAY); // older history never gets a burst
 
-  // Latest visit per client — includes future bookings, so anyone already rebooked drops out.
+  // Latest visit per email — future bookings included, so anyone already rebooked drops out.
   const latest = await prisma.booking.groupBy({
     by: ["clientEmail"],
     where: VISIT_WHERE,
     _max: { appointmentAt: true },
-    having: { appointmentAt: { _max: { lte: due, gt: oldest } } },
+    having: { appointmentAt: { _max: { lte: newest, gt: oldest } } },
   });
   if (!latest.length) return 0;
 
+  // Latest visit per phone number, to catch clients who rebooked under another email.
+  const recent = await prisma.booking.findMany({
+    where: { AND: [VISIT_WHERE, { appointmentAt: { gt: oldest } }] },
+    select: { clientPhone: true, appointmentAt: true },
+  });
+  const latestByPhone = new Map<string, Date>();
+  for (const r of recent) {
+    const d = usPhoneDigits(r.clientPhone);
+    if (!latestByPhone.has(d) || latestByPhone.get(d)! < r.appointmentAt) latestByPhone.set(d, r.appointmentAt);
+  }
+
   const contacts = await prisma.emailContact.findMany({ where: { email: { in: latest.map((l) => l.clientEmail) } } });
   const byEmail = new Map(contacts.map((c) => [c.email, c]));
-  const candidates = latest
-    .filter((l) => {
-      const c = byEmail.get(l.clientEmail);
-      return !c?.unsubscribedAt && !(c?.lastRetentionAt && c.lastRetentionAt > l._max.appointmentAt!);
-    })
-    .slice(0, PER_RUN);
 
   let sent = 0;
-  for (const c of candidates) {
-    const lastVisit = c._max.appointmentAt!;
-    // Claim: create the contact row if needed, then stamp it only if not already stamped.
-    await prisma.emailContact.upsert({ where: { email: c.clientEmail }, update: {}, create: { email: c.clientEmail } });
-    const claim = await prisma.emailContact.updateMany({
-      where: { email: c.clientEmail, unsubscribedAt: null, OR: [{ lastRetentionAt: null }, { lastRetentionAt: { lte: lastVisit } }] },
-      data: { lastRetentionAt: now },
-    });
-    if (claim.count !== 1) continue;
+  for (const l of latest) {
+    if (sent >= PER_RUN) break;
+    const lastVisit = l._max.appointmentAt!;
+    const contact = byEmail.get(l.clientEmail);
+    if (contact?.unsubscribedAt) continue;
+
+    // Which email is due: 1, 2 or 3 (the highest step whose day count has passed).
+    const daysSince = (now.getTime() - lastVisit.getTime()) / DAY;
+    const step = RETENTION_STEPS.filter((d) => daysSince >= d).length;
+    const sameVisit = contact?.retentionVisitAt?.getTime() === lastVisit.getTime();
+    const alreadySent = sameVisit ? contact!.retentionStep : 0;
+    if (step <= alreadySent) continue;
+    // Never two of these within 3 weeks (e.g. right after this feature first switches on).
+    if (contact?.lastRetentionAt && contact.lastRetentionAt > new Date(now.getTime() - 21 * DAY)) continue;
 
     const booking = await prisma.booking.findFirst({
-      where: { AND: [VISIT_WHERE, { clientEmail: c.clientEmail, appointmentAt: lastVisit }] },
+      where: { AND: [VISIT_WHERE, { clientEmail: l.clientEmail, appointmentAt: lastVisit }] },
       include: { service: true },
     });
     if (!booking) continue;
+    const phoneLatest = latestByPhone.get(usPhoneDigits(booking.clientPhone));
+    if (phoneLatest && phoneLatest > lastVisit) continue; // rebooked with a different email
+
+    // Claim this step atomically so overlapping runs never double-send.
+    await prisma.emailContact.upsert({ where: { email: l.clientEmail }, update: {}, create: { email: l.clientEmail } });
+    const claim = await prisma.emailContact.updateMany({
+      where: {
+        email: l.clientEmail,
+        unsubscribedAt: null,
+        ...(sameVisit ? { retentionVisitAt: lastVisit, retentionStep: alreadySent } : { OR: [{ retentionVisitAt: null }, { retentionVisitAt: { not: lastVisit } }] }),
+      },
+      data: { retentionStep: step, retentionVisitAt: lastVisit, lastRetentionAt: now },
+    });
+    if (claim.count !== 1) continue;
+
     try {
-      await notifyRetention(booking);
-      await prisma.activityLog.create({ data: { bookingId: booking.id, action: "3-month reminder emailed", detail: `“Time for a refresh?” — link to book ${booking.service.name} again` } });
+      await notifyRetention(booking, step as 1 | 2 | 3, Math.round(RETENTION_STEPS[step - 1] / 30));
+      await prisma.activityLog.create({
+        data: { bookingId: booking.id, action: `Come-back email ${step} of 3 sent`, detail: `${Math.round(RETENTION_STEPS[step - 1] / 30)} months after this visit` },
+      });
       sent++;
     } catch (err) {
       console.error("[followups] retention email failed", err);
