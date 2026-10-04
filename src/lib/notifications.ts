@@ -6,7 +6,7 @@ import { priorVisits, unsubscribeHeaders, unsubscribeUrl } from "./clients";
 import { DEPOSIT_CENTS, SALON } from "./config";
 import { esc, googleCalendarLink, renderEmail, siteBase, type EmailButton, type EmailRow } from "./email-template";
 import { PREP_CHECKLIST } from "./policies";
-import { formatDuration, formatSalonDate, formatSalonTime, formatUSD, ordinal } from "./time";
+import { formatDuration, formatSalonDate, formatSalonTime, formatUSD, ordinal, salonDateKey } from "./time";
 
 type BookingWithService = Booking & { service: Service };
 
@@ -102,7 +102,8 @@ function bookingRows(b: BookingWithService, d: ReturnType<typeof details>): Emai
   ];
 }
 
-const PREP = PREP_CHECKLIST.slice(0, 5).map((p) => p.body);
+// "Running late?" is left out: its line needs its heading, and every email already says how to reach us.
+const PREP = PREP_CHECKLIST.filter((p) => p.title !== "Running late?").map((p) => p.body);
 const directions: EmailButton = { label: "Get directions", href: SALON.mapsUrl };
 const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
 
@@ -222,47 +223,112 @@ export async function notifyBookingConfirmed(b: BookingWithService, kind: "DEPOS
   await dispatch(jobs);
 }
 
-/** 30-minute reminder to client + owner (triggered by the cron route). */
-export async function notifyAppointmentReminder(b: BookingWithService) {
+/**
+ * Appointment reminders to client + owner (triggered by the cron route):
+ * "DAY_BEFORE" ≈ 24 hours ahead, "SOON" ≈ 2 hours ahead.
+ */
+export function appointmentReminderEmails(b: BookingWithService, kind: "DAY_BEFORE" | "SOON", now = new Date()) {
   const d = details(b);
-  const clientHtml = renderEmail({
-    preheader: `Your ${d.service} appointment starts at ${d.time}.`,
-    eyebrow: "Appointment reminder",
-    title: `See you in 30 minutes, ${d.firstName}! 💛`,
-    intro: `Your appointment starts at <strong>${esc(d.time)}</strong> at PHENIX Salon Suites, Suite 101.`,
-    highlight: { label: "Booking code", value: b.bookingCode },
-    rows: [
-      { label: "Style", value: d.service },
-      ...(d.addOns ? [{ label: "Add-ons", value: d.addOns }] : []),
-      { label: "Time", value: d.time },
-      { label: "Balance due", value: d.balance, strong: d.hasBalance },
-    ],
-    buttons: [{ ...directions, primary: true }, ...(d.hasBalance ? [{ label: "Pay balance now", href: d.payUrl }] : [])],
-    note: `Running late? Call or text <a href="${SALON.phoneHref}" style="color:#1e3a8a">${esc(SALON.phone)}</a>.`,
-  });
-  const clientText = `Reminder: your ${d.service} appointment starts at ${d.time} (in 30 minutes). ${SALON.fullAddress}.${d.hasBalance ? ` Balance due: ${d.balance}.` : ""} Running late? Call/text ${SALON.phone}.`;
+  const sameDay = salonDateKey(b.appointmentAt) === salonDateKey(now);
+  const when = sameDay ? "today" : "tomorrow";
+  const callText = `<a href="${SALON.smsHref}" style="color:#1e3a8a;white-space:nowrap">${esc(SALON.phone)}</a>`;
+  const rows: EmailRow[] = [
+    { label: "Style", value: `${d.service} (${d.duration})` },
+    ...(d.addOns ? [{ label: "Add-ons", value: d.addOns }] : []),
+    { label: "Date", value: d.date },
+    { label: "Time", value: d.time },
+    { label: "Balance due", value: d.balance, strong: d.hasBalance },
+  ];
+  const payButton = d.hasBalance ? [{ label: `Pay ${d.balance} balance`, href: d.payUrl }] : [];
 
-  const ownerHtml = renderEmail({
-    preheader: `${b.clientName} at ${d.time} — ${d.service}`,
-    eyebrow: "Upcoming client",
-    signoff: false,
-    title: `${b.clientName} in 30 minutes`,
-    rows: [
-      { label: "Client", value: b.clientName },
-      { label: "Phone", value: b.clientPhone },
-      ...(b.notes ? [{ label: "Allergies / notes", value: b.notes }] : []),
-      { label: "Style", value: d.service },
-      ...(d.addOns ? [{ label: "Add-ons", value: d.addOns }] : []),
-      { label: "Time", value: d.time },
-      { label: "Balance due", value: d.balance, strong: d.hasBalance },
-    ],
-    buttons: [{ label: "Call client", href: telHref(b.clientPhone), primary: true }],
-  });
-  const ownerText = `REMINDER: ${b.clientName} (${b.clientPhone}) — ${d.service} at ${d.time}. Balance ${d.balance}.`;
+  const client =
+    kind === "DAY_BEFORE"
+      ? {
+          subject: `See you ${when}, ${d.firstName}! ${d.service} at ${d.time}`,
+          html: renderEmail({
+            preheader: `Reminder: ${d.service} ${when} at ${d.time} — PHENIX Salon Suites, Suite 101.`,
+            eyebrow: `Your appointment is ${when}`,
+            title: `See you ${when}, ${d.firstName}! 💛`,
+            intro: `Just a friendly reminder that your appointment is <strong>${when}, ${esc(d.date)} at ${esc(d.time)}</strong>, at PHENIX Salon Suites, Suite 101.`,
+            highlight: { label: "Booking code", value: b.bookingCode },
+            rows,
+            buttons: [
+              ...(d.hasBalance ? [{ label: `Pay ${d.balance} balance`, href: d.payUrl, primary: true }] : []),
+              { label: "Add to Google Calendar", href: d.calendarUrl, primary: !d.hasBalance },
+              directions,
+            ],
+            sections: [{ title: "Before your appointment", items: PREP }],
+            note: `Need to reach us before your appointment? Call or text ${callText}.${
+              d.hasBalance
+                ? ` You can pay your balance online, by <strong>Cash App ${esc(SALON.cashApp)}</strong> or <strong>Zelle ${esc(SALON.zelle)}</strong> (put your code ${b.bookingCode} in the note), or at your appointment.`
+                : ""
+            }`,
+          }),
+          text: [
+            `See you ${when}, ${d.firstName}!`,
+            "",
+            `${d.service} — ${d.date} at ${d.time}`,
+            `Booking code: ${b.bookingCode}`,
+            `Balance due: ${d.balance}`,
+            ...(d.hasBalance ? [`Pay your balance: ${d.payUrl}`] : []),
+            "",
+            `${SALON.fullAddress}`,
+            `Directions: ${SALON.mapsUrl}`,
+            `Questions? Call or text ${SALON.phone}.`,
+          ].join("\n"),
+        }
+      : {
+          subject: `${sameDay ? "Today" : "Tomorrow"} at ${d.time}: your ${d.service} appointment`,
+          html: renderEmail({
+            preheader: `Your ${d.service} appointment starts at ${d.time} — Suite 101, PHENIX Salon Suites.`,
+            eyebrow: "See you soon",
+            title: `See you soon, ${d.firstName}! ✨`,
+            intro: `Your appointment starts at <strong>${esc(d.time)} ${when}</strong> at PHENIX Salon Suites, ${esc(SALON.addressLine)}, <strong>Suite 101</strong>.`,
+            highlight: { label: "Booking code", value: b.bookingCode },
+            rows,
+            buttons: [{ ...directions, primary: true }, ...payButton],
+            note: `Running late? Please call or text ${callText} so we can plan around it.`,
+          }),
+          text: `Reminder: your ${d.service} appointment starts at ${d.time} ${when}. ${SALON.fullAddress}.${d.hasBalance ? ` Balance due: ${d.balance} (${d.payUrl}).` : ""} Directions: ${SALON.mapsUrl}. Running late? Call/text ${SALON.phone}.`,
+        };
 
-  const jobs: Promise<unknown>[] = [sendEmail(b.clientEmail, `Starting in 30 minutes: ${d.service} at ${d.time}`, clientHtml, clientText)];
-  if (process.env.ADMIN_EMAIL) jobs.push(sendEmail(process.env.ADMIN_EMAIL, `⏰ In 30 min: ${b.clientName} — ${d.service}`, ownerHtml, ownerText));
-  jobs.push(sendWhatsAppAlert(`⏰ *In 30 min:* ${b.clientName} (${b.clientPhone}) — ${d.service} at ${d.time}. Balance ${d.balance}.`));
+  const lead = kind === "DAY_BEFORE" ? (sameDay ? "Today" : "Tomorrow") : "In 2 hours";
+  const emoji = kind === "DAY_BEFORE" ? "📅" : "⏰";
+  const owner = {
+    subject: `${emoji} ${lead}: ${b.clientName} — ${d.service} at ${d.time}`,
+    html: renderEmail({
+      preheader: `${b.clientName} · ${d.service} · ${d.date} ${d.time} · balance ${d.balance}`,
+      eyebrow: kind === "DAY_BEFORE" ? `Client ${when}` : "Upcoming client",
+      signoff: false,
+      title: `${b.clientName} — ${kind === "DAY_BEFORE" ? `${when} at ${d.time}` : `in 2 hours (${d.time})`}`,
+      rows: [
+        { label: "Client", value: b.clientName },
+        { label: "Phone", value: b.clientPhone },
+        ...(b.notes ? [{ label: "Allergies / notes", value: b.notes }] : []),
+        ...rows,
+      ],
+      buttons: [
+        { label: "Call client", href: telHref(b.clientPhone), primary: true },
+        { label: "Open booking", href: `${siteBase()}/manage/b/${b.id}` },
+      ],
+    }),
+    text: `${lead.toUpperCase()}: ${b.clientName} (${b.clientPhone}) — ${d.service} at ${d.time}, ${d.date}. Balance ${d.balance}.${b.notes ? ` Notes: ${b.notes}` : ""}`,
+    whatsapp: [
+      `${emoji} *${lead}:* ${b.clientName} · ${b.clientPhone}`,
+      `💇🏾‍♀️ ${d.service}${d.addOns ? ` + ${d.addOns}` : ""}`,
+      `📅 ${d.date} at ${d.time}`,
+      `💵 Balance ${d.balance}`,
+      ...(b.notes ? [`📝 ${b.notes}`] : []),
+    ].join("\n"),
+  };
+  return { client, owner };
+}
+
+export async function notifyAppointmentReminder(b: BookingWithService, kind: "DAY_BEFORE" | "SOON") {
+  const { client, owner } = appointmentReminderEmails(b, kind);
+  const jobs: Promise<unknown>[] = [sendEmail(b.clientEmail, client.subject, client.html, client.text)];
+  if (process.env.ADMIN_EMAIL) jobs.push(sendEmail(process.env.ADMIN_EMAIL, owner.subject, owner.html, owner.text));
+  jobs.push(sendWhatsAppAlert(owner.whatsapp));
   await dispatch(jobs);
 }
 

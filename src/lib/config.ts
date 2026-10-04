@@ -42,7 +42,6 @@ export const MAX_DAYS_AHEAD = 90; // how far out the calendar opens
 // so a session can never be paid after its hold has lapsed.
 export const CHECKOUT_HOLD_MINUTES = 31;
 
-export const REMINDER_MINUTES_BEFORE = 30;
 
 export const DEPOSIT_POLICY =
   "⚠️ POLICY: A strict, non-refundable deposit of $30.00 USD is required upfront to secure and block your appointment slot.";

@@ -58,34 +58,35 @@ model Service {
 }
 
 model Booking {
-  id                  String          @id @default(uuid())
-  bookingCode         String          @unique // human-friendly code, e.g. "PJ-7K3Q9X" (used on /pay)
-  clientName          String
-  clientEmail         String // stored lower-cased
-  clientPhone         String
-  notes               String?         @db.Text // allergies / requests entered at booking
-  appointmentAt       DateTime // exact locked start (UTC)
-  endAt               DateTime // appointmentAt + service duration (UTC) — used for overlap checks
-  serviceId           String
-  service             Service         @relation(fields: [serviceId], references: [id])
-  totalCents          Int // price snapshot at booking time (style + add-ons)
-  addOnsCents         Int             @default(0) // part of totalCents that came from add-ons
-  addOns              Json? // { hair, bundles, colorMix, summary, lines } as booked
-  amountPaidCents     Int             @default(0)
-  paymentStatus       BookingStatus   @default(PENDING_DEPOSIT)
-  stripeSessionId     String          @unique // the deposit Checkout Session
-  holdExpiresAt       DateTime? // only meaningful while PENDING_DEPOSIT
-  reminderSentAt      DateTime?
-  outcome             BookingOutcome?
-  cancelledAt         DateTime?
-  cancelReason        String?         @db.Text
-  depositRefunded     Boolean         @default(false)
-  ownerNotes          String?         @db.Text // private; never shown to clients
-  reviewRequestSentAt DateTime? // "how was your visit? leave us a review" email
-  activity            ActivityLog[]
-  payments            Payment[]
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  id                      String          @id @default(uuid())
+  bookingCode             String          @unique // human-friendly code, e.g. "PJ-7K3Q9X" (used on /pay)
+  clientName              String
+  clientEmail             String // stored lower-cased
+  clientPhone             String
+  notes                   String?         @db.Text // allergies / requests entered at booking
+  appointmentAt           DateTime // exact locked start (UTC)
+  endAt                   DateTime // appointmentAt + service duration (UTC) — used for overlap checks
+  serviceId               String
+  service                 Service         @relation(fields: [serviceId], references: [id])
+  totalCents              Int // price snapshot at booking time (style + add-ons)
+  addOnsCents             Int             @default(0) // part of totalCents that came from add-ons
+  addOns                  Json? // { hair, bundles, colorMix, summary, lines } as booked
+  amountPaidCents         Int             @default(0)
+  paymentStatus           BookingStatus   @default(PENDING_DEPOSIT)
+  stripeSessionId         String          @unique // the deposit Checkout Session
+  holdExpiresAt           DateTime? // only meaningful while PENDING_DEPOSIT
+  dayBeforeReminderSentAt DateTime? // 24-hour reminder (client + owner)
+  reminderSentAt          DateTime? // 2-hour reminder (client + owner)
+  outcome                 BookingOutcome?
+  cancelledAt             DateTime?
+  cancelReason            String?         @db.Text
+  depositRefunded         Boolean         @default(false)
+  ownerNotes              String?         @db.Text // private; never shown to clients
+  reviewRequestSentAt     DateTime? // "how was your visit? leave us a review" email
+  activity                ActivityLog[]
+  payments                Payment[]
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
 
   @@index([appointmentAt, endAt])
   @@index([clientEmail])

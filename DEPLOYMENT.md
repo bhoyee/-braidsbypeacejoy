@@ -142,6 +142,14 @@ The server is in London, so US visitors get a slight delay. Two ways to fix it:
 - From a booking you can: record Cash App / Zelle / cash payments (client gets a receipt), mark completed or no-show (deposit kept), cancel (client is emailed; the deposit is kept unless you tick "Refund the deposit"), and keep private notes.
 - Optional: set `ADMIN_SESSION_SECRET` in `.env` to a long random string; otherwise one is derived from `CRON_SECRET`.
 
+## Appointment reminders
+
+Sent by the every-minute reminders cron (`src/lib/reminders.ts`) to the client (email) and the owner (email + WhatsApp):
+
+- **24 hours before** — "See you tomorrow": details, balance + pay link, Add to Calendar, directions, prep checklist. Skipped when the booking was made less than 36 hours ahead (the confirmation was just sent).
+- **2 hours before** — "See you soon": address/suite, directions, balance, "running late?". Skipped when booked less than 3 hours ahead.
+- Never for cancelled bookings. Each one is logged in the booking's activity in Manage Bookings.
+
 ## Automatic follow-up emails
 
 Sent by the every-minute reminders cron, only between 10 AM and 6 PM salon time:
