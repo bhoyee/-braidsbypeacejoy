@@ -168,17 +168,31 @@ export default async function HomePage() {
                 </figcaption>
               </figure>
             ))}
-            {/* CTA tile */}
-            <div className="braid-texture flex aspect-[3/4] flex-col justify-between rounded-3xl bg-royal-700 p-8 text-white lg:row-span-2 lg:aspect-auto">
-              <CrownIcon width={40} height={40} className="text-gold-400" />
+            {/* CTA tile, with the storefront photo framed as a card */}
+            <div className="braid-texture flex flex-col gap-6 rounded-3xl bg-royal-700 p-6 text-white sm:p-7 lg:row-span-2">
+              <figure className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-navy-900 shadow-xl ring-2 ring-gold-400/70 lg:aspect-auto lg:flex-1">
+                <Image
+                  src="/assets/storefront.jpg"
+                  alt="A client with long red boho braids outside the Braids by Peace Joy storefront"
+                  fill
+                  sizes="(min-width:1024px) 25vw, (min-width:640px) 50vw, 100vw"
+                  className="object-cover object-[50%_35%]"
+                />
+                <figcaption className="absolute inset-x-3 bottom-3 rounded-xl bg-navy-950/70 px-3 py-2 text-xs font-semibold text-white backdrop-blur">
+                  📍 Our storefront · PHENIX Salon Suite 101
+                </figcaption>
+              </figure>
               <div>
-                <p className="font-display text-3xl font-semibold leading-tight">
-                  Your crown <span className="text-gold-300 italic">is next.</span>
+                <p className="flex items-center gap-2 font-display text-3xl font-semibold leading-tight">
+                  <CrownIcon width={28} height={28} className="shrink-0 text-gold-400" />
+                  <span>
+                    Your crown <span className="text-gold-300 italic">is next.</span>
+                  </span>
                 </p>
                 <p className="mt-3 text-sm text-white/75">Pick a style, choose your time, and lock it in with a $30 deposit.</p>
                 <Link
                   href="/book"
-                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-gold-400 px-6 py-3 font-bold text-navy-950 transition hover:bg-gold-300"
+                  className="mt-5 inline-flex items-center gap-2 rounded-full bg-gold-400 px-6 py-3 font-bold text-navy-950 transition hover:bg-gold-300"
                 >
                   Book Now <ArrowRightIcon width={18} height={18} />
                 </Link>

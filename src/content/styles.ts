@@ -201,6 +201,7 @@ export const STYLES: StyleEntry[] = [
     category: "box",
     priceCents: 26000,
     durationMin: 240,
+    imageUrl: "/assets/styles/small-box-braids.jpg",
     description: "Fine, neat box braids that last and style beautifully.",
   },
 
