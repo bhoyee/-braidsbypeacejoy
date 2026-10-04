@@ -30,6 +30,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
   const [step, setStep] = useState(0);
   // Arriving from a style's "Book" button: show just that style (the full list is one tap away).
   const [showPicker, setShowPicker] = useState(!preselected);
+  const [pickedHere, setPickedHere] = useState(false); // chose from the list on this page (vs. arrived with ?service=)
   const router = useRouter();
   const [serviceId, setServiceId] = useState<string | null>(preselected?.id ?? null);
   const [dateKey, setDateKey] = useState<string | null>(null);
@@ -43,7 +44,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [addOns, setAddOns] = useState<AddOnSelection>(NO_ADDONS);
-  const customizeRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLOListElement>(null);
 
   const { minKey, maxKey } = useMemo(() => {
     const today = salonDateKey(new Date());
@@ -101,14 +102,22 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
       setStartsAt(null);
       setSlots(null);
     }
-    // Bring the "Customize your style" panel into view.
-    requestAnimationFrame(() => customizeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    // Show just the chosen style with its "Customize your style" panel.
+    setPickedHere(true);
+    setShowPicker(false);
   };
 
-  // Arriving from a style card (?service=…) — jump straight to its customize panel.
+  // Every change of step (or between the style list and the chosen style) starts at the
+  // top of the booking steps — otherwise the page stays scrolled down near the footer.
+  // (On first load only when arriving with a style chosen, so it opens on that style.)
+  const mounted = useRef(false);
   useEffect(() => {
-    if (preselected) setTimeout(() => customizeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
-  }, [preselected]);
+    const first = !mounted.current;
+    mounted.current = true;
+    if (first && !preselected) return;
+    const t = setTimeout(() => topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), first ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [step, showPicker, preselected]);
 
   const detailsValid =
     details.clientName.trim().length >= 2 &&
@@ -157,7 +166,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
       {notice && <p className="mb-6 rounded-2xl bg-royal-700 px-5 py-4 text-sm text-white">{notice}</p>}
 
       {/* Stepper */}
-      <ol className="mb-10 grid grid-cols-4 gap-2">
+      <ol ref={topRef} className="mb-10 grid scroll-mt-24 grid-cols-4 gap-2 sm:scroll-mt-16">
         {STEPS.map((label, i) => {
           const done = i < step;
           const active = i === step;
@@ -196,8 +205,10 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
             <button
               type="button"
               onClick={() => {
-                // Back to the previous page; if there is none (opened in a new tab), the style menu.
-                if (window.history.length > 1) router.back();
+                // Picked on this page → back to the list. Otherwise back to the previous page;
+                // if there is none (opened in a new tab), the style menu.
+                if (pickedHere) setShowPicker(true);
+                else if (window.history.length > 1) router.back();
                 else router.push("/styles");
               }}
               className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-navy-900 ring-1 ring-navy-900/10 transition hover:bg-gold-200/60"
@@ -221,11 +232,6 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
           <h2 className="mb-6 font-display text-3xl font-bold text-navy-900">Select your style</h2>
           {services.length === 0 && <p className="text-navy-900/60">No styles are available right now — please check back soon.</p>}
           <StylePicker services={services} selectedId={serviceId} onSelect={chooseService} />
-          <div ref={customizeRef} className="scroll-mt-48">
-            {service && (
-              <StyleCustomizer service={service} value={chosenAddOns} quote={quote} onChange={setAddOns} onContinue={() => setStep(1)} />
-            )}
-          </div>
         </section>
       )}
 

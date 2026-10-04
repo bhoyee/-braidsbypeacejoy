@@ -1,10 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { browseStyles, categoryLabel, categoryTabs } from "@/lib/catalog";
 import type { PublicService } from "@/lib/services";
 import { formatDuration, formatUSD } from "@/lib/time";
-import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, SearchIcon } from "../icons";
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, CrownIcon, SearchIcon } from "../icons";
 
 const PER_PAGE = 9; // 3 rows of 3
 
@@ -99,28 +100,56 @@ export function StylePicker({
                 key={s.id}
                 type="button"
                 onClick={() => onSelect(s.id)}
-                className={`group rounded-2xl bg-white p-5 text-left ring-2 transition hover:-translate-y-0.5 hover:shadow-xl ${
+                className={`group flex flex-col overflow-hidden rounded-2xl bg-white text-left shadow-sm ring-2 transition hover:-translate-y-0.5 hover:shadow-xl ${
                   active ? "ring-gold-400" : "ring-transparent hover:ring-royal-700/30"
                 }`}
               >
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-royal-700/70">{categoryLabel(s.category)}</p>
-                <p className="mt-1 font-display text-xl font-semibold text-navy-900">{s.name}</p>
-                <p className="mt-2 flex items-center gap-3 text-sm text-navy-900/60">
-                  <span className="font-bold text-royal-700">{formatUSD(s.priceCents)}</span>
-                  <span className="flex items-center gap-1"><ClockIcon width={14} height={14} /> {formatDuration(s.durationMin)}</span>
-                </p>
-                <span
-                  className={`mt-4 inline-flex items-center gap-1 rounded-full px-4 py-2 text-xs font-semibold ${
-                    active ? "bg-gold-400 text-navy-950" : "bg-royal-700 text-white group-hover:bg-gold-400 group-hover:text-navy-950"
-                  }`}
-                >
-                  {active ? (
-                    <>
-                      <CheckIcon width={14} height={14} /> Selected
-                    </>
+                {/* Photo (or the brand placeholder) with price, category, note and name — like the style menu */}
+                <span className="relative block aspect-[4/3] overflow-hidden bg-navy-900">
+                  {s.imageUrl ? (
+                    <Image
+                      src={s.imageUrl}
+                      alt=""
+                      fill
+                      sizes="(min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
+                      className="object-cover transition duration-700 group-hover:scale-105"
+                    />
                   ) : (
-                    "Select & Book Slot"
+                    <span className="braid-texture absolute inset-0 flex items-center justify-center bg-gradient-to-br from-royal-700 via-navy-900 to-navy-950">
+                      <CrownIcon width={48} height={48} className="text-gold-400/70" />
+                    </span>
                   )}
+                  <span className="absolute inset-0 bg-gradient-to-t from-navy-950/85 via-navy-950/10 to-transparent" />
+                  <span className="absolute left-3 top-3 rounded-full bg-gold-400 px-2.5 py-0.5 text-xs font-bold text-navy-950 shadow">
+                    {formatUSD(s.priceCents)}
+                  </span>
+                  <span className="absolute right-3 top-3 rounded-full bg-navy-950/60 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur">
+                    {categoryLabel(s.category)}
+                  </span>
+                  <span className="absolute inset-x-3 bottom-3 space-y-1.5">
+                    {s.note && (
+                      <span className="inline-block rounded-lg bg-gold-400/95 px-2 py-0.5 text-[10px] font-bold leading-snug text-navy-950">💡 {s.note}</span>
+                    )}
+                    <span className="block font-display text-xl font-semibold leading-tight text-white">{s.name}</span>
+                  </span>
+                </span>
+                <span className="flex items-center justify-between gap-3 p-4">
+                  <span className="flex items-center gap-1 text-sm text-navy-900/60">
+                    <ClockIcon width={14} height={14} /> {formatDuration(s.durationMin)}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-4 py-2 text-xs font-semibold ${
+                      active ? "bg-gold-400 text-navy-950" : "bg-royal-700 text-white group-hover:bg-gold-400 group-hover:text-navy-950"
+                    }`}
+                  >
+                    {active ? (
+                      <>
+                        <CheckIcon width={14} height={14} /> Selected
+                      </>
+                    ) : (
+                      "Select"
+                    )}
+                  </span>
                 </span>
               </button>
             );
