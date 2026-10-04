@@ -11,6 +11,7 @@ import {
   type ActionState,
 } from "@/app/manage/actions";
 import type { Slot } from "@/lib/availability";
+import { useConfirm, type ConfirmOptions } from "./ConfirmDialog";
 
 const card = "rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-900/5";
 const input =
@@ -59,15 +60,26 @@ export function RecordPaymentForm({ id, balance }: { id: string; balance: number
   );
 }
 
+const NO_SHOW: ConfirmOptions = {
+  title: "Mark as no-show?",
+  message: "The client didn't come. The $30 deposit is kept — no refund for no-shows. You can undo this later.",
+  confirmLabel: "Yes, mark no-show",
+  tone: "warning",
+};
+const askNoShow = (e: React.FormEvent<HTMLFormElement>) =>
+  ((e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null)?.value === "NO_SHOW" ? NO_SHOW : null;
+
 export function OutcomeButtons({ id, started, current }: { id: string; started: boolean; current: "COMPLETED" | "NO_SHOW" | null }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(outcomeAction, null);
+  const { guard, dialog } = useConfirm();
   return (
     <section className={card}>
+      {dialog}
       <h2 className="font-display text-xl text-navy-900">After the appointment</h2>
       <p className="mt-1 text-sm text-navy-900/60">
         {started ? "Did the client come? You can change this later." : "These unlock when the appointment starts."}
       </p>
-      <form action={action} className="mt-4 flex flex-wrap gap-2">
+      <form action={action} onSubmit={(e) => guard(e, askNoShow(e))} className="mt-4 flex flex-wrap gap-2">
         <input type="hidden" name="id" value={id} />
         <button name="outcome" value="COMPLETED" disabled={!started || pending || current === "COMPLETED"} className="rounded-full bg-green-600 px-5 py-2.5 font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40">
           ✓ Completed
@@ -76,9 +88,6 @@ export function OutcomeButtons({ id, started, current }: { id: string; started: 
           name="outcome"
           value="NO_SHOW"
           disabled={!started || pending || current === "NO_SHOW"}
-          onClick={(e) => {
-            if (!confirm("Mark as no-show? The deposit is kept (no refund for no-shows).")) e.preventDefault();
-          }}
           className="rounded-full bg-orange-500 px-5 py-2.5 font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
         >
           No-show
@@ -114,9 +123,11 @@ export function NotesForm({ id, notes }: { id: string; notes: string }) {
 
 export function CancelForm({ id, canRefund }: { id: string; canRefund: boolean }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(cancelAction, null);
+  const { guard, dialog } = useConfirm();
   if (state?.ok) return <Feedback state={state} />;
   return (
     <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-red-200">
+      {dialog}
       <h2 className="font-display text-xl text-red-700">Cancel this booking</h2>
       <p className="mt-1 text-sm text-navy-900/60">Frees the time slot and emails the client.</p>
       <form
@@ -124,7 +135,17 @@ export function CancelForm({ id, canRefund }: { id: string; canRefund: boolean }
         className="mt-4 space-y-3"
         onSubmit={(e) => {
           const refund = (e.currentTarget.elements.namedItem("refund") as HTMLInputElement | null)?.checked;
-          if (!confirm(`Cancel this booking${refund ? " and REFUND the deposit" : " (deposit kept)"}? The client will be emailed.`)) e.preventDefault();
+          guard(e, {
+            title: "Cancel this booking?",
+            message: (
+              <>
+                The time slot will be freed and the client will be emailed.{" "}
+                {refund ? <strong className="text-red-700">The $30 deposit will be refunded to their card.</strong> : <strong>The deposit is kept.</strong>}
+              </>
+            ),
+            confirmLabel: refund ? "Cancel & refund" : "Yes, cancel booking",
+            tone: "danger",
+          });
         }}
       >
         <input type="hidden" name="id" value={id} />
@@ -154,9 +175,11 @@ export function CancelForm({ id, canRefund }: { id: string; canRefund: boolean }
 /** Compact Completed / No-show buttons for the booking list. */
 export function QuickOutcome({ id }: { id: string }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(outcomeAction, null);
+  const { guard, dialog } = useConfirm();
   if (state?.ok) return null; // the list refreshes with the new badge
   return (
-    <form action={action} className="flex gap-1.5">
+    <form action={action} onSubmit={(e) => guard(e, askNoShow(e))} className="flex gap-1.5">
+      {dialog}
       <input type="hidden" name="id" value={id} />
       <button name="outcome" value="COMPLETED" disabled={pending} className="rounded-full bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50">
         ✓ Completed
@@ -165,9 +188,6 @@ export function QuickOutcome({ id }: { id: string }) {
         name="outcome"
         value="NO_SHOW"
         disabled={pending}
-        onClick={(e) => {
-          if (!confirm("Mark as no-show? The deposit is kept (no refund for no-shows).")) e.preventDefault();
-        }}
         className="rounded-full bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
       >
         No-show
@@ -184,6 +204,7 @@ export function RescheduleForm({ id, today, currentDate, currentLabel }: { id: s
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [pick, setPick] = useState<Slot | null>(null);
   const [loading, startLoading] = useTransition();
+  const { guard, dialog } = useConfirm();
 
   const chooseDate = (d: string) => {
     setDate(d);
@@ -196,6 +217,7 @@ export function RescheduleForm({ id, today, currentDate, currentLabel }: { id: s
 
   return (
     <section className={`${card} md:col-span-2`}>
+      {dialog}
       <h2 className="font-display text-xl text-navy-900">Reschedule</h2>
       <p className="mt-1 text-sm text-navy-900/60">
         Currently <strong className="text-navy-900">{currentLabel}</strong>. Pick a new day and time — only free times can be chosen (Maryland time).
@@ -204,7 +226,22 @@ export function RescheduleForm({ id, today, currentDate, currentLabel }: { id: s
         action={action}
         className="mt-4 space-y-4"
         onSubmit={(e) => {
-          if (!pick || !confirm(`Move this appointment to ${new Date(pick.startsAt).toLocaleDateString("en-US", { timeZone: "America/New_York", weekday: "long", month: "long", day: "numeric" })} at ${pick.label}?`)) e.preventDefault();
+          if (!pick) return e.preventDefault();
+          const day = new Date(pick.startsAt).toLocaleDateString("en-US", { timeZone: "America/New_York", weekday: "long", month: "long", day: "numeric" });
+          const notify = (e.currentTarget.elements.namedItem("notify") as HTMLInputElement | null)?.checked;
+          guard(e, {
+            title: "Move this appointment?",
+            message: (
+              <>
+                From <strong>{currentLabel}</strong>
+                <br />
+                to <strong className="text-royal-700">{day} at {pick.label}</strong> (Maryland time).
+                <br />
+                <span className="mt-2 block">{notify ? "The client will be emailed the new time." : "The client will not be emailed."}</span>
+              </>
+            ),
+            confirmLabel: `Move to ${pick.label}`,
+          });
         }}
       >
         <input type="hidden" name="id" value={id} />
