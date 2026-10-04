@@ -1,0 +1,16 @@
+{
+  "node": {
+    "402a88709ecc101a29bd872bf4f9453b10145c1cc7": {
+      "workers": {
+        "app/unsubscribe/page": {
+          "moduleId": 40658,
+          "async": false,
+          "codeHash": null
+        }
+      },
+      "exportedName": "$$RSC_SERVER_ACTION_0",
+      "filename": "src/app/unsubscribe/page.tsx"
+    }
+  },
+  "edge": {}
+}

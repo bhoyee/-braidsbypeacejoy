@@ -1,0 +1,3 @@
+{
+  "/api/cache/purge/route": "app/api/cache/purge/route.js"
+}

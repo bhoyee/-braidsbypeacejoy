@@ -1,0 +1,163 @@
+// Braidsbypeacejoy — MySQL schema (cPanel)
+// All money is stored as integer cents (USD). $30.00 = 3000.
+// All DateTime values are stored in UTC; the salon timezone (America/New_York)
+// is applied only at the edges (UI + notifications).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum BookingStatus {
+  PENDING_DEPOSIT // slot is temporarily held while the client is on Stripe Checkout
+  DEPOSIT_PAID // $30 deposit captured — slot is locked
+  FULLY_SETTLED // full style price captured — slot is locked
+  EXPIRED // checkout abandoned/expired — slot released
+  REFUNDED // paid but could not be honoured (e.g. race on the same slot) — refunded automatically
+  CANCELLED // cancelled by the owner — slot released
+}
+
+// What happened at the appointment (set by the owner on /manage).
+enum BookingOutcome {
+  COMPLETED
+  NO_SHOW
+}
+
+enum PaymentKind {
+  DEPOSIT
+  BALANCE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+  REFUNDED
+}
+
+model Service {
+  id          String    @id @default(uuid())
+  slug        String    @unique
+  name        String // e.g. "Knotless Braids", "Boho Locs"
+  description String?   @db.Text
+  imageUrl    String? // e.g. "/assets/styles/knotless.jpg"
+  priceCents  Int // Full price of style in cents
+  durationMin Int // Service time block in minutes
+  hairBundles Int? // fixed bundle count for hair add-ons (e.g. Bora Bora = 4); null = client chooses
+  category    String    @default("other") // tab on the style menu (see src/content/styles.ts)
+  popular     Boolean   @default(false) // shown in "Popular Styles" on the home page
+  active      Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  bookings    Booking[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Booking {
+  id                      String          @id @default(uuid())
+  bookingCode             String          @unique // human-friendly code, e.g. "PJ-7K3Q9X" (used on /pay)
+  clientName              String
+  clientEmail             String // stored lower-cased
+  clientPhone             String
+  notes                   String?         @db.Text // allergies / requests entered at booking
+  appointmentAt           DateTime // exact locked start (UTC)
+  endAt                   DateTime // appointmentAt + service duration (UTC) — used for overlap checks
+  serviceId               String
+  service                 Service         @relation(fields: [serviceId], references: [id])
+  totalCents              Int // price snapshot at booking time (style + add-ons)
+  addOnsCents             Int             @default(0) // part of totalCents that came from add-ons
+  addOns                  Json? // { hair, bundles, colorMix, summary, lines } as booked
+  amountPaidCents         Int             @default(0)
+  paymentStatus           BookingStatus   @default(PENDING_DEPOSIT)
+  stripeSessionId         String          @unique // the deposit Checkout Session
+  holdExpiresAt           DateTime? // only meaningful while PENDING_DEPOSIT
+  dayBeforeReminderSentAt DateTime? // 24-hour reminder (client + owner)
+  reminderSentAt          DateTime? // 2-hour reminder (client + owner)
+  outcome                 BookingOutcome?
+  cancelledAt             DateTime?
+  cancelReason            String?         @db.Text
+  depositRefunded         Boolean         @default(false)
+  ownerNotes              String?         @db.Text // private; never shown to clients
+  reviewRequestSentAt     DateTime? // "how was your visit? leave us a review" email
+  activity                ActivityLog[]
+  payments                Payment[]
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  @@index([appointmentAt, endAt])
+  @@index([clientEmail])
+  @@index([paymentStatus, appointmentAt])
+}
+
+// One row per Stripe Checkout Session (deposit or balance). Gives us an
+// idempotent ledger for webhook processing.
+model Payment {
+  id                    String        @id @default(uuid())
+  bookingId             String
+  booking               Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  kind                  PaymentKind
+  amountCents           Int
+  status                PaymentStatus @default(PENDING)
+  stripeSessionId       String        @unique
+  stripePaymentIntentId String?
+  method                String        @default("STRIPE") // STRIPE | CASHAPP | ZELLE | CASH
+  note                  String?
+  paidAt                DateTime?
+  createdAt             DateTime      @default(now())
+
+  @@index([bookingId, kind, status])
+}
+
+// One-time email sign-in links for the owner's /manage page (only the hash is stored).
+model AdminLoginToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+}
+
+// Small key/value store (e.g. the admin session version used for "sign out everywhere").
+model Setting {
+  key   String @id
+  value String @db.Text
+}
+
+// Every change the owner makes on /manage.
+model ActivityLog {
+  id        String   @id @default(uuid())
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  action    String
+  detail    String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([bookingId, createdAt])
+}
+
+// Single-row mutex. `SELECT ... FOR UPDATE` on this row serialises every
+// "check slot → write booking" sequence (one stylist = one global calendar).
+// InnoDB releases the row lock on COMMIT/ROLLBACK, so there is no window in
+// which two transactions can both see a slot as free.
+model SchedulerLock {
+  id Int @id
+
+  @@map("scheduler_lock")
+}
+
+/// One row per client email: marketing-email preferences and follow-up history.
+model EmailContact {
+  email            String    @id // lower-cased
+  unsubscribedAt   DateTime? // no review / "time for a refresh" emails after this
+  lastRetentionAt  DateTime? // when the last "come back" email went out
+  retentionStep    Int       @default(0) // how many "come back" emails were sent for retentionVisitAt (max 3)
+  retentionVisitAt DateTime? // the visit that sequence is about; a newer visit starts it again
+  updatedAt        DateTime  @updatedAt
+}
