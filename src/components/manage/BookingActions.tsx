@@ -1,7 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
-import { cancelAction, notesAction, outcomeAction, recordPaymentAction, type ActionState } from "@/app/manage/actions";
+import { useActionState, useState, useTransition } from "react";
+import {
+  cancelAction,
+  notesAction,
+  outcomeAction,
+  recordPaymentAction,
+  rescheduleAction,
+  rescheduleSlotsAction,
+  type ActionState,
+} from "@/app/manage/actions";
+import type { Slot } from "@/lib/availability";
 
 const card = "rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-900/5";
 const input =
@@ -165,5 +174,95 @@ export function QuickOutcome({ id }: { id: string }) {
       </button>
       {state && !state.ok && <span className="self-center text-xs text-red-700">{state.error}</span>}
     </form>
+  );
+}
+
+/** Move the appointment: pick a day, see that day's open times, choose one. */
+export function RescheduleForm({ id, today, currentDate, currentLabel }: { id: string; today: string; currentDate: string; currentLabel: string }) {
+  const [state, action, saving] = useActionState<ActionState, FormData>(rescheduleAction, null);
+  const [date, setDate] = useState("");
+  const [slots, setSlots] = useState<Slot[] | null>(null);
+  const [pick, setPick] = useState<Slot | null>(null);
+  const [loading, startLoading] = useTransition();
+
+  const chooseDate = (d: string) => {
+    setDate(d);
+    setPick(null);
+    setSlots(null);
+    if (d) startLoading(async () => setSlots(await rescheduleSlotsAction(id, d)));
+  };
+
+  if (state?.ok) return <section className={card}><h2 className="font-display text-xl text-navy-900">Reschedule</h2><Feedback state={state} /></section>;
+
+  return (
+    <section className={`${card} md:col-span-2`}>
+      <h2 className="font-display text-xl text-navy-900">Reschedule</h2>
+      <p className="mt-1 text-sm text-navy-900/60">
+        Currently <strong className="text-navy-900">{currentLabel}</strong>. Pick a new day and time — only free times can be chosen (Maryland time).
+      </p>
+      <form
+        action={action}
+        className="mt-4 space-y-4"
+        onSubmit={(e) => {
+          if (!pick || !confirm(`Move this appointment to ${new Date(pick.startsAt).toLocaleDateString("en-US", { timeZone: "America/New_York", weekday: "long", month: "long", day: "numeric" })} at ${pick.label}?`)) e.preventDefault();
+        }}
+      >
+        <input type="hidden" name="id" value={id} />
+        <input type="hidden" name="startsAt" value={pick?.startsAt ?? ""} />
+        <label className="block max-w-xs">
+          <span className="mb-1 block text-sm font-semibold text-navy-900">New date</span>
+          <input type="date" min={today} defaultValue="" onChange={(e) => chooseDate(e.target.value)} className={input} />
+        </label>
+
+        {date && (
+          <div>
+            <p className="mb-2 text-sm font-semibold text-navy-900">New time</p>
+            {loading || !slots ? (
+              <p className="text-sm text-navy-900/60">Loading open times…</p>
+            ) : slots.some((s) => s.status === "available") ? (
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-7">
+                {slots.map((s) => {
+                  const free = s.status === "available";
+                  const current = date === currentDate && s.label === currentLabel.split(" at ")[1]?.replace(/ E[DS]T$/, "");
+                  const chosen = pick?.startsAt === s.startsAt;
+                  return (
+                    <button
+                      key={s.startsAt}
+                      type="button"
+                      disabled={!free}
+                      onClick={() => setPick(s)}
+                      title={free ? "" : s.status === "booked" ? "Another booking" : s.status === "after-hours" ? "Would finish after 7 PM" : "Already passed"}
+                      className={`rounded-xl px-2 py-2 text-sm font-semibold transition ${
+                        chosen
+                          ? "bg-gold-400 text-navy-950 ring-2 ring-gold-500"
+                          : free
+                            ? "bg-cream text-navy-900 ring-1 ring-navy-900/10 hover:bg-royal-700 hover:text-white"
+                            : "cursor-not-allowed bg-navy-900/5 text-navy-900/30 line-through"
+                      } ${current ? "outline outline-2 outline-offset-2 outline-royal-700/40" : ""}`}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="rounded-xl bg-cream p-3 text-sm text-navy-900/70">No free times on this day — try another date.</p>
+            )}
+          </div>
+        )}
+
+        <label className="flex items-center gap-3 text-sm text-navy-900">
+          <input type="checkbox" name="notify" defaultChecked className="h-4 w-4 accent-royal-700" />
+          Email the client the new date and time
+        </label>
+        <button
+          disabled={!pick || saving}
+          className="rounded-full bg-royal-700 px-6 py-3 font-semibold text-white hover:bg-navy-900 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {saving ? "Saving…" : pick ? `Move to ${pick.label}` : "Choose a new time"}
+        </button>
+      </form>
+      <Feedback state={state} />
+    </section>
   );
 }

@@ -67,14 +67,30 @@ export function validateStart(start: Date, durationMin: number, now = new Date()
   return null;
 }
 
-/** Every half-hour start time inside operating hours for a given salon date. */
-export async function getDaySlots(dateKey: string, durationMin: number): Promise<Slot[]> {
+/**
+ * Every half-hour start time inside operating hours for a given salon date.
+ * Options (owner rescheduling): ignore one booking's own time, and a different
+ * minimum lead time (clients must book 2 hours ahead; the owner can use any future time).
+ */
+export async function getDaySlots(
+  dateKey: string,
+  durationMin: number,
+  opts: { excludeBookingId?: string; minLeadMinutes?: number } = {},
+): Promise<Slot[]> {
   const now = new Date();
+  const lead = opts.minLeadMinutes ?? MIN_LEAD_MINUTES;
   const dayStart = salonTimeToUtc(dateKey, OPEN_MINUTE);
   const dayEnd = salonTimeToUtc(dateKey, CLOSE_MINUTE);
 
   const busy = await prisma.booking.findMany({
-    where: { AND: [blockingWhere(now), { appointmentAt: { lt: dayEnd } }, { endAt: { gt: dayStart } }] },
+    where: {
+      AND: [
+        blockingWhere(now),
+        { appointmentAt: { lt: dayEnd } },
+        { endAt: { gt: dayStart } },
+        opts.excludeBookingId ? { id: { not: opts.excludeBookingId } } : {},
+      ],
+    },
     select: { appointmentAt: true, endAt: true },
   });
 
@@ -83,7 +99,7 @@ export async function getDaySlots(dateKey: string, durationMin: number): Promise
     const start = salonTimeToUtc(dateKey, m);
     const end = new Date(start.getTime() + durationMin * 60_000);
     let status: SlotStatus = "available";
-    if (start.getTime() < now.getTime() + MIN_LEAD_MINUTES * 60_000) status = "past";
+    if (start.getTime() < now.getTime() + lead * 60_000) status = "past";
     else if (m + durationMin > CLOSE_MINUTE) status = "after-hours";
     else if (busy.some((b) => b.appointmentAt < end && b.endAt > start)) status = "booked";
 

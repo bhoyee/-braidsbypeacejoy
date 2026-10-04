@@ -10,7 +10,7 @@ import {
   signOutEverywhere,
   startSession,
 } from "@/lib/admin-auth";
-import { cancelBooking, recordPayment, saveNotes, setOutcome } from "@/lib/manage";
+import { cancelBooking, recordPayment, rescheduleBooking, rescheduleSlots, saveNotes, setOutcome } from "@/lib/manage";
 
 // Server actions for /manage. Next.js only accepts these from this site's own pages
 // (Origin check), and every booking action re-checks the owner session.
@@ -79,4 +79,15 @@ export async function notesAction(_prev: ActionState, form: FormData): Promise<A
   await requireAdmin();
   const id = String(form.get("id"));
   return done(id, await saveNotes(id, String(form.get("notes") ?? "")));
+}
+
+export async function rescheduleSlotsAction(id: string, dateKey: string) {
+  await requireAdmin();
+  return rescheduleSlots(id, dateKey);
+}
+
+export async function rescheduleAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const id = String(form.get("id"));
+  return done(id, await rescheduleBooking(id, String(form.get("startsAt") ?? ""), form.get("notify") === "on"));
 }

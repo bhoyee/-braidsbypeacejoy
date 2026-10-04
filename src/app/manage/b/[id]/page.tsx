@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { CancelForm, NotesForm, OutcomeButtons, RecordPaymentForm } from "@/components/manage/BookingActions";
+import { CancelForm, NotesForm, OutcomeButtons, RecordPaymentForm, RescheduleForm } from "@/components/manage/BookingActions";
 import { ClientBadge, StatusBadges } from "@/components/manage/StatusBadges";
 import { addOnsSummary } from "@/lib/addons";
 import { isAdmin } from "@/lib/admin-auth";
 import { clientHistory, isUnsubscribed, visitNumbers } from "@/lib/clients";
 import { getBooking, PAYMENT_METHODS } from "@/lib/manage";
-import { formatDuration, formatSalonDate, formatSalonTime, formatUSD } from "@/lib/time";
+import { formatDuration, formatSalonDate, formatSalonTime, formatUSD, salonDateKey } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +101,14 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
       </div>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
+        {active && !b.outcome && (
+          <RescheduleForm
+            id={b.id}
+            today={salonDateKey(new Date())}
+            currentDate={salonDateKey(b.appointmentAt)}
+            currentLabel={`${formatSalonDate(b.appointmentAt)} at ${formatSalonTime(b.appointmentAt)}`}
+          />
+        )}
         {active && balance > 0 && <RecordPaymentForm id={b.id} balance={balance} />}
         {active && <OutcomeButtons id={b.id} started={started} current={b.outcome} />}
         <NotesForm id={b.id} notes={b.ownerNotes ?? ""} />

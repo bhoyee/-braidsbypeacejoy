@@ -524,3 +524,25 @@ export async function notifyRetention(b: BookingWithService, step: 1 | 2 | 3, mo
   const m = retentionEmail(b, step, months);
   await sendEmail(b.clientEmail, m.subject, m.html, m.text, unsubscribeHeaders(b.clientEmail));
 }
+
+/** Owner moved the appointment (from /manage). Tells the client the new date and time. */
+export async function notifyBookingRescheduled(b: BookingWithService, previousStart: Date) {
+  const d = details(b);
+  const was = `${formatSalonDate(previousStart)} at ${formatSalonTime(previousStart)}`;
+  const html = renderEmail({
+    preheader: `New time: ${d.service} on ${d.date} at ${d.time}.`,
+    eyebrow: "Appointment updated",
+    title: `Your new appointment time, ${d.firstName}`,
+    intro: `Your appointment has been moved to <strong>${esc(d.date)} at ${esc(d.time)}</strong>. Your deposit and booking code stay the same.`,
+    highlight: { label: "Booking code", value: b.bookingCode },
+    rows: [{ label: "Previously", value: was }, ...bookingRows(b, d)],
+    buttons: [
+      { label: "Add to Google Calendar", href: d.calendarUrl, primary: true },
+      ...(d.hasBalance ? [{ label: `Pay ${d.balance} balance`, href: d.payUrl }] : []),
+      directions,
+    ],
+    note: `Didn't expect this change, or need a different time? Call or text <a href="${SALON.smsHref}" style="color:#1e3a8a;white-space:nowrap">${esc(SALON.phone)}</a>.`,
+  });
+  const text = `Your ${d.service} appointment (code ${b.bookingCode}) has been moved to ${d.date} at ${d.time} (previously ${was}). ${SALON.fullAddress}. Add to calendar: ${d.calendarUrl}. Questions? Call/text ${SALON.phone}.`;
+  await dispatch([sendEmail(b.clientEmail, `New time: ${d.service} on ${d.date} at ${d.time}`, html, text)]);
+}

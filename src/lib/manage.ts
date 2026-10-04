@@ -1,8 +1,11 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
-import { salonDateKey, salonTimeToUtc, formatUSD } from "./time";
-import { notifyBookingCancelled, notifyManualPayment } from "./notifications";
+import { CLOSE_MINUTE, OPEN_MINUTE, SLOT_STEP_MIN } from "./config";
+import { findConflict, getDaySlots } from "./availability";
+import { withSchedulerLock } from "./booking";
+import { formatSalonDate, formatSalonTime, salonDateKey, salonMinuteOfDay, salonTimeToUtc, formatUSD } from "./time";
+import { notifyBookingCancelled, notifyBookingRescheduled, notifyManualPayment } from "./notifications";
 import { prisma } from "./prisma";
 import { stripe } from "./stripe";
 
@@ -188,4 +191,56 @@ export async function saveNotes(id: string, notes: string): Promise<Result> {
   await prisma.booking.update({ where: { id }, data: { ownerNotes: text || null } });
   await log(id, "Private notes updated");
   return { ok: true, message: "Notes saved." };
+}
+
+/* ------------------------------------------------------------------ */
+/* Reschedule                                                          */
+/* ------------------------------------------------------------------ */
+
+/** Open start times on a day for moving this booking (its own current time counts as free). */
+export async function rescheduleSlots(id: string, dateKey: string) {
+  const b = await prisma.booking.findUnique({ where: { id }, include: { service: true } });
+  if (!b || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return [];
+  return getDaySlots(dateKey, b.service.durationMin, { excludeBookingId: id, minLeadMinutes: 0 });
+}
+
+/**
+ * Move a confirmed booking to a new start time. Same rules as client bookings
+ * (opening hours, finish by 7 PM, no overlaps — checked under the scheduler lock),
+ * except the owner may choose any future time. Reminders are re-armed for the new time.
+ */
+export async function rescheduleBooking(id: string, startsAt: string, emailClient: boolean): Promise<Result> {
+  const start = new Date(startsAt);
+  if (Number.isNaN(start.getTime())) return { ok: false, error: "Choose a new date and time." };
+
+  const before = await prisma.booking.findUnique({ where: { id }, include: { service: true } });
+  if (!before) return { ok: false, error: "Booking not found." };
+  if (!ACTIVE.includes(before.paymentStatus as (typeof ACTIVE)[number])) return { ok: false, error: "Only confirmed bookings can be rescheduled." };
+  if (before.outcome) return { ok: false, error: "This appointment is already marked as completed or no-show." };
+  if (start.getTime() === before.appointmentAt.getTime()) return { ok: false, error: "That's the current time — choose a different one." };
+
+  const minute = salonMinuteOfDay(start);
+  const duration = before.service.durationMin;
+  if (start.getTime() % (SLOT_STEP_MIN * 60_000) !== 0) return { ok: false, error: "Invalid start time." };
+  if (start.getTime() <= Date.now()) return { ok: false, error: "That time has already passed." };
+  if (minute < OPEN_MINUTE || minute + duration > CLOSE_MINUTE)
+    return { ok: false, error: `${before.service.name} must start at 8:00 AM or later and finish by 7:00 PM.` };
+
+  const end = new Date(start.getTime() + duration * 60_000);
+  const updated = await withSchedulerLock(async (tx) => {
+    if (await findConflict(tx, start, end, id)) return null;
+    return tx.booking.update({
+      where: { id },
+      // New time → the 24-hour and 2-hour reminders go out again for it.
+      data: { appointmentAt: start, endAt: end, dayBeforeReminderSentAt: null, reminderSentAt: null },
+      include: { service: true },
+    });
+  });
+  if (!updated) return { ok: false, error: "That time overlaps another booking — choose another time." };
+
+  const from = `${formatSalonDate(before.appointmentAt)} at ${formatSalonTime(before.appointmentAt)}`;
+  const to = `${formatSalonDate(start)} at ${formatSalonTime(start)}`;
+  await log(id, "Rescheduled", `${from} → ${to}${emailClient ? " · client emailed" : " · client not emailed"}`);
+  if (emailClient) await notifyBookingRescheduled(updated, before.appointmentAt).catch((e) => console.error("[notify]", e));
+  return { ok: true, message: `Moved to ${to}.${emailClient ? " The client has been emailed." : ""}` };
 }
