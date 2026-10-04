@@ -29,7 +29,12 @@ export default function PrivacyPage() {
         <LegalSection title="How we use it">
           <ul>
             <li>To schedule, confirm and manage your appointment, and to take deposits and balance payments.</li>
-            <li>To send booking confirmations, payment receipts and appointment reminders by email.</li>
+            <li>To send booking confirmations, payment receipts and appointment reminders (24 hours and 2 hours before) by email.</li>
+            <li>
+              To follow up after your visit: a request to review us on Google or social media, and up to three reminders to
+              book again (about 2, 3 and 4 months after your last visit, stopping as soon as you rebook). We recognise
+              returning clients by their email address or phone number.
+            </li>
             <li>To prepare for your appointment safely — for example, allergy information you share.</li>
             <li>To respond to your questions and keep business and tax records.</li>
           </ul>
@@ -41,6 +46,7 @@ export default function PrivacyPage() {
             <li>Stripe, to process online payments securely.</li>
             <li>Our email provider, to send confirmations and reminders.</li>
             <li>Our website hosting providers, which store booking records securely.</li>
+            <li>WhatsApp, only when you choose to message us using the chat button.</li>
           </ul>
           <p>We may also disclose information when required by law.</p>
         </LegalSection>
@@ -55,7 +61,23 @@ export default function PrivacyPage() {
         <LegalSection title="Your choices">
           <ul>
             <li>You can ask us to see, correct or delete the personal information we hold about you, subject to records we must keep by law.</li>
-            <li>You can opt out of reminder emails at any time by telling us.</li>
+            <li>
+              Every review request and &ldquo;book again&rdquo; email has an Unsubscribe link, or you can simply tell us. Booking
+              confirmations, receipts and appointment reminders are still sent for appointments you book.
+            </li>
+          </ul>
+        </LegalSection>
+
+        <LegalSection title="Cookies">
+          <p>
+            We don&apos;t use advertising or tracking cookies, and we don&apos;t run analytics that follow you around the web.
+          </p>
+          <ul>
+            <li>The salon owner&apos;s private booking page uses one essential sign-in cookie. Visitors never receive it.</li>
+            <li>
+              The map on our home page is provided by Google Maps, and online payments are handled on Stripe&apos;s secure checkout
+              page. These services may set their own cookies, covered by their own privacy policies.
+            </li>
           </ul>
         </LegalSection>
 
