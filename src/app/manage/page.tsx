@@ -29,7 +29,7 @@ export default async function ManagePage({ searchParams }: { searchParams: SP })
 
   if (!adminConfigured()) {
     return (
-      <div className="mx-auto mt-10 max-w-md rounded-3xl bg-white p-8 text-center shadow">
+      <div className="mx-auto mt-[20vh] max-w-md rounded-3xl bg-white p-8 text-center shadow">
         <h1 className="font-display text-2xl text-navy-900">Not set up yet</h1>
         <p className="mt-2 text-sm text-navy-900/70">ADMIN_EMAIL and CRON_SECRET must be set in the server&apos;s .env file.</p>
       </div>

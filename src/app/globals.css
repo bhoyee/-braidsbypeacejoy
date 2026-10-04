@@ -38,6 +38,8 @@
 
 html {
   scroll-behavior: smooth;
+  /* Keep anything the browser scrolls to (links, #anchors, page changes) below the fixed 112px header. */
+  scroll-padding-top: 112px;
 }
 
 body {
