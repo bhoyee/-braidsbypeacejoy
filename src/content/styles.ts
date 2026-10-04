@@ -16,7 +16,7 @@
 //
 // After editing, commit and push to main: the deploy syncs this list into the
 // database automatically (prisma/seed.ts).
-// Prices are the salon's price list. ⚠️ Durations are estimates — confirm with the owner.
+// Prices are the salon's price list. Durations: 4 hours each (owner's rule), except where stated.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const CATEGORIES = [
@@ -64,7 +64,7 @@ export const STYLES: StyleEntry[] = [
     name: "Medium-Large Knotless Braids (Mid-back)",
     category: "knotless",
     priceCents: 22000,
-    durationMin: 270,
+    durationMin: 240,
     description: "The sweet spot between bold and classic — quicker install, mid-back length.",
   },
   {
@@ -72,7 +72,7 @@ export const STYLES: StyleEntry[] = [
     name: "Medium Knotless Braids (Mid-back)",
     category: "knotless",
     priceCents: 24000,
-    durationMin: 300,
+    durationMin: 240,
     imageUrl: "/assets/pix3.jpeg",
     popular: true,
     description: "The signature everyday luxury braid — painless roots, flawless parts.",
@@ -82,7 +82,7 @@ export const STYLES: StyleEntry[] = [
     name: "Smedium Knotless Braids",
     category: "knotless",
     priceCents: 25000,
-    durationMin: 330,
+    durationMin: 240,
     popular: true,
     note: "Price depends on the length.",
     description: "Small-medium knotless braids — fuller than small, neater than medium.",
@@ -92,7 +92,7 @@ export const STYLES: StyleEntry[] = [
     name: "Small Knotless Braids (Mid-back)",
     category: "knotless",
     priceCents: 30000,
-    durationMin: 390,
+    durationMin: 240,
     popular: true,
     description: "Featherlight, ultra-neat knotless parts for a long-lasting, refined finish.",
   },
@@ -110,7 +110,7 @@ export const STYLES: StyleEntry[] = [
     name: "Jumbo Knotless Braids (Waist length)",
     category: "knotless",
     priceCents: 18000,
-    durationMin: 210,
+    durationMin: 240,
     description: "Statement jumbo braids down to the waist — quick to install, easy to wear.",
   },
   {
@@ -118,7 +118,7 @@ export const STYLES: StyleEntry[] = [
     name: "Short Bob Braids (Shoulder length)",
     category: "knotless",
     priceCents: 20000,
-    durationMin: 180,
+    durationMin: 240,
     description: "A chic shoulder-length bob — light, playful and low-maintenance.",
   },
 
@@ -128,7 +128,7 @@ export const STYLES: StyleEntry[] = [
     name: "Medium Bohemian Knotless Braids",
     category: "boho",
     priceCents: 27000,
-    durationMin: 330,
+    durationMin: 240,
     popular: true,
     description: "Knotless braids with soft curls throughout for an effortless goddess look.",
   },
@@ -137,7 +137,7 @@ export const STYLES: StyleEntry[] = [
     name: "Small-Medium Bohemian Knotless Braids",
     category: "boho",
     priceCents: 28000,
-    durationMin: 360,
+    durationMin: 240,
     description: "Finer boho knotless braids with flowing curls — extra full and feminine.",
   },
   {
@@ -145,7 +145,7 @@ export const STYLES: StyleEntry[] = [
     name: "Bora Bora Braids (Medium)",
     category: "boho",
     priceCents: 40000,
-    durationMin: 360,
+    durationMin: 240,
     hairBundles: 4,
     popular: true,
     note: BRING_BOHO,
@@ -156,7 +156,7 @@ export const STYLES: StyleEntry[] = [
     name: "Bora Bora Braids (Smedium)",
     category: "boho",
     priceCents: 42000,
-    durationMin: 420,
+    durationMin: 240,
     hairBundles: 4,
     note: BRING_BOHO,
     description: "Smaller Bora Bora braids with curls throughout for an extra-full finish.",
@@ -166,7 +166,7 @@ export const STYLES: StyleEntry[] = [
     name: "Mermaid Braids",
     category: "boho",
     priceCents: 38000,
-    durationMin: 360,
+    durationMin: 240,
     hairBundles: 3,
     popular: true,
     note: BRING_BOHO,
@@ -179,7 +179,7 @@ export const STYLES: StyleEntry[] = [
     name: "Medium Box Braids",
     category: "box",
     priceCents: 23000,
-    durationMin: 300,
+    durationMin: 240,
     description: "Classic box braids with crisp square parts.",
   },
   {
@@ -187,7 +187,7 @@ export const STYLES: StyleEntry[] = [
     name: "Small Box Braids",
     category: "box",
     priceCents: 26000,
-    durationMin: 360,
+    durationMin: 240,
     description: "Fine, neat box braids that last and style beautifully.",
   },
 
@@ -215,7 +215,7 @@ export const STYLES: StyleEntry[] = [
     name: "Small Ponytail Cornrows",
     category: "cornrows",
     priceCents: 20000,
-    durationMin: 180,
+    durationMin: 240,
     description: "Small cornrows swept up into a long, polished ponytail.",
   },
   {
@@ -223,7 +223,7 @@ export const STYLES: StyleEntry[] = [
     name: "Small Straight-Back Cornrows",
     category: "cornrows",
     priceCents: 19000,
-    durationMin: 150,
+    durationMin: 240,
     description: "Neat, small cornrows braided straight back.",
   },
   {
@@ -231,7 +231,7 @@ export const STYLES: StyleEntry[] = [
     name: "6 Stitch Braids",
     category: "cornrows",
     priceCents: 12000,
-    durationMin: 120,
+    durationMin: 240,
     note: "6 stitch braids at $20 each.",
     description: "Crisp stitched feed-in braids with a sleek, sculpted finish.",
   },
@@ -242,7 +242,7 @@ export const STYLES: StyleEntry[] = [
     name: "Island Twist — Smedium (Mid-back)",
     category: "twists-locs",
     priceCents: 26000,
-    durationMin: 330,
+    durationMin: 240,
     description: "Lightweight twists with a soft, curly finish, mid-back length.",
   },
   {
@@ -250,7 +250,7 @@ export const STYLES: StyleEntry[] = [
     name: "Medium Senegalese Twist",
     category: "twists-locs",
     priceCents: 23000,
-    durationMin: 300,
+    durationMin: 240,
     description: "Sleek, rope-like twists with a smooth, glossy finish.",
   },
   {
@@ -258,7 +258,7 @@ export const STYLES: StyleEntry[] = [
     name: "Kinky Twist",
     category: "twists-locs",
     priceCents: 23000,
-    durationMin: 300,
+    durationMin: 240,
     hair: "bring",
     note: HAIR_NOT_PROVIDED,
     description: "Textured twists that blend naturally with your own hair.",
@@ -278,7 +278,7 @@ export const STYLES: StyleEntry[] = [
     name: "Crochet",
     category: "twists-locs",
     priceCents: 13000,
-    durationMin: 150,
+    durationMin: 240,
     hair: "bring",
     note: HAIR_NOT_PROVIDED,
     description: "A quick, versatile protective style installed with crochet hair.",
@@ -299,7 +299,7 @@ export const STYLES: StyleEntry[] = [
     name: "Kids Cornrows (8–13 years)",
     category: "kids",
     priceCents: 10000,
-    durationMin: 120,
+    durationMin: 240,
     description: "Neat, gentle cornrows for kids aged 8 to 13.",
   },
 
@@ -309,7 +309,7 @@ export const STYLES: StyleEntry[] = [
     name: "Men Braids",
     category: "men-more",
     priceCents: 10000,
-    durationMin: 90,
+    durationMin: 240,
     hair: "none",
     note: "Price depends on the style — from $80.",
     description: "Clean, sharp braids and cornrows for men.",
@@ -319,7 +319,7 @@ export const STYLES: StyleEntry[] = [
     name: "Braids Take-Out",
     category: "men-more",
     priceCents: 10000,
-    durationMin: 120,
+    durationMin: 240,
     hair: "none",
     description: "Careful removal of your old braids, gentle on your hair and edges.",
   },
