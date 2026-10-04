@@ -37,7 +37,7 @@ const nextConfig = {
         // The host's LiteSpeed server caches pages; Next marks prerendered pages as
         // cacheable "for a year". Cap LiteSpeed at 10 minutes for PAGES (each deploy
         // also purges it). API responses are never cached — see the next rule.
-        source: "/((?!_next/static|assets|api|manage|unsubscribe).*)",
+        source: "/((?!_next/static|assets|api|manage|unsubscribe|review).*)",
         headers: [{ key: "X-LiteSpeed-Cache-Control", value: "public,max-age=600" }],
       },
       {
