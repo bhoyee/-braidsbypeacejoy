@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { HAIR_OPTIONS, MAX_BUNDLES, quoteAddOns } from "@/lib/addons";
+import { HAIR_OPTIONS, MAX_BUNDLES, asHairPolicy, normalizeAddOns, quoteAddOns } from "@/lib/addons";
 import { validateStart } from "@/lib/availability";
 import { formatUsPhone, isValidUsPhone } from "@/lib/phone";
 import { createDepositHold, releaseHold, SlotTakenError } from "@/lib/booking";
@@ -55,7 +55,11 @@ export async function POST(req: NextRequest) {
   if (invalid) return NextResponse.json({ error: invalid }, { status: 422 });
 
   // Re-price add-ons on the server from the style's own bundle count — never trust a client total.
-  const selection = input.addOns ?? { hair: "included", colorMix: false };
+  // The style's hair rule wins: "bring" styles can only be "own hair", "none" styles have no add-ons.
+  const selection = normalizeAddOns(
+    (input.addOns ?? { hair: "included", colorMix: false }) as Parameters<typeof normalizeAddOns>[0],
+    asHairPolicy(service.hair),
+  );
   const quote = quoteAddOns(selection as Parameters<typeof quoteAddOns>[0], service.hairBundles);
 
   let hold: Awaited<ReturnType<typeof createDepositHold>>;

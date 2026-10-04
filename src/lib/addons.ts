@@ -69,3 +69,31 @@ export function addOnsSummary(b: { addOns: unknown }): string {
 export function clampBundles(n: number) {
   return Math.min(MAX_BUNDLES, Math.max(1, Math.round(n) || 1));
 }
+
+/* ------------------------------------------------------------------ */
+/* Per-style hair rules (Service.hair, set in src/content/styles.ts)   */
+/* ------------------------------------------------------------------ */
+
+/** "included" = normal options · "bring" = hair not provided, client brings it · "none" = no add-ons at all. */
+export type HairPolicy = "included" | "bring" | "none";
+
+export const asHairPolicy = (v: string | null | undefined): HairPolicy => (v === "bring" || v === "none" ? v : "included");
+
+/** The hair options a style offers. */
+export function hairOptionsFor(policy: HairPolicy) {
+  if (policy === "none") return [];
+  if (policy === "bring") return HAIR_OPTIONS.filter((o) => o.id === "own");
+  return [...HAIR_OPTIONS];
+}
+
+/** Starting selection for a style. */
+export function defaultAddOns(policy: HairPolicy): AddOnSelection {
+  return { hair: policy === "bring" ? "own" : "included", colorMix: false };
+}
+
+/** Forces a selection to fit the style's rules (used by the browser AND re-checked at checkout). */
+export function normalizeAddOns(sel: AddOnSelection, policy: HairPolicy): AddOnSelection {
+  if (policy === "none") return { hair: "included", colorMix: false };
+  const allowed = hairOptionsFor(policy).some((o) => o.id === sel.hair);
+  return allowed ? sel : { ...sel, hair: defaultAddOns(policy).hair };
+}

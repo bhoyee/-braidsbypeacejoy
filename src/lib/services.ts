@@ -9,6 +9,8 @@ export type PublicService = {
   priceCents: number;
   durationMin: number;
   hairBundles: number | null;
+  hair: string; // "included" | "bring" | "none" — see src/lib/addons.ts
+  note: string | null;
   category: string;
   popular: boolean;
 };
@@ -28,6 +30,8 @@ export async function listServicesFromDb(): Promise<PublicService[]> {
       priceCents: true,
       durationMin: true,
       hairBundles: true,
+      hair: true,
+      note: true,
       category: true,
       popular: true,
     },

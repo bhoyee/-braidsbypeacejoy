@@ -40,7 +40,7 @@ export const BOOKING_POLICIES: PolicySection[] = [
     id: "pricing",
     title: "Pricing",
     points: [
-      "All prices include braiding hair, except passion twists and crochet styles.",
+      "All prices include braiding hair, except kinky twists, passion twists and crochet (please bring your own hair). For Bora Bora and Mermaid braids, please bring your boho (curly) hair.",
       "A mix of two or more colors adds $20.",
       "Final price may change based on the length and size of the braids you choose.",
     ],

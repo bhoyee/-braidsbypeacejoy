@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NO_ADDONS, quoteAddOns, type AddOnSelection } from "@/lib/addons";
+import { NO_ADDONS, asHairPolicy, normalizeAddOns, quoteAddOns, type AddOnSelection } from "@/lib/addons";
 import { formatUsPhone, isValidUsPhone, usPhoneDigits } from "@/lib/phone";
 import type { Slot } from "@/lib/availability";
 import { DEPOSIT_CENTS, MAX_DAYS_AHEAD } from "@/lib/config";
@@ -47,7 +47,9 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
   }, []);
 
   const service = services.find((s) => s.id === serviceId) ?? null;
-  const quote = useMemo(() => quoteAddOns(addOns, service?.hairBundles), [addOns, service?.hairBundles]);
+  // The style's hair rule (e.g. "hair not provided") always applies to what's shown and sent.
+  const chosenAddOns = useMemo(() => normalizeAddOns(addOns, asHairPolicy(service?.hair)), [addOns, service?.hair]);
+  const quote = useMemo(() => quoteAddOns(chosenAddOns, service?.hairBundles), [chosenAddOns, service?.hairBundles]);
   const totalCents = (service?.priceCents ?? 0) + quote.totalCents;
 
   // Returning from a cancelled Stripe Checkout → release the held slot immediately.
@@ -125,7 +127,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
           clientEmail: details.clientEmail.trim(),
           clientPhone: details.clientPhone.trim(),
           notes: details.notes.trim() || undefined,
-          addOns: { hair: addOns.hair, bundles: quote.bundles, colorMix: addOns.colorMix },
+          addOns: { hair: chosenAddOns.hair, bundles: quote.bundles, colorMix: chosenAddOns.colorMix },
         }),
       });
       const data = await res.json();
@@ -191,7 +193,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
           <StylePicker services={services} selectedId={serviceId} onSelect={chooseService} />
           <div ref={customizeRef} className="scroll-mt-48">
             {service && (
-              <StyleCustomizer service={service} value={addOns} quote={quote} onChange={setAddOns} onContinue={() => setStep(1)} />
+              <StyleCustomizer service={service} value={chosenAddOns} quote={quote} onChange={setAddOns} onContinue={() => setStep(1)} />
             )}
           </div>
         </section>
@@ -338,7 +340,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
               {quote.lines.map((l) => (
                 <Row key={l.label} label={l.label} value={`+${formatUSD(l.cents)}`} />
               ))}
-              {addOns.hair === "own" && <Row label="Hair" value="Bringing my own" />}
+              {chosenAddOns.hair === "own" && <Row label="Hair" value="Bringing my own" />}
               <Row label="Total" value={formatUSD(totalCents)} />
               <Row label="Due today (deposit)" value={formatUSD(DEPOSIT_CENTS)} strong />
               <Row label="Balance due later" value={formatUSD(Math.max(0, totalCents - DEPOSIT_CENTS))} />

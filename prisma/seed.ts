@@ -24,6 +24,8 @@ async function main() {
       description: s.description ?? null,
       imageUrl: s.imageUrl ?? null,
       hairBundles: s.hairBundles ?? null,
+      hair: s.hair ?? "included",
+      note: s.note ?? null,
       popular: s.popular ?? false,
       active: !s.hidden,
       sortOrder: i,

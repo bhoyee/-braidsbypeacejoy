@@ -1,6 +1,6 @@
 "use client";
 
-import { COLOR_MIX_CENTS, HAIR_OPTIONS, MAX_BUNDLES, clampBundles, type AddOnQuote, type AddOnSelection } from "@/lib/addons";
+import { COLOR_MIX_CENTS, HAIR_OPTIONS, MAX_BUNDLES, asHairPolicy, clampBundles, hairOptionsFor, type AddOnQuote, type AddOnSelection } from "@/lib/addons";
 import type { PublicService } from "@/lib/services";
 import { formatDuration, formatUSD } from "@/lib/time";
 import { ArrowRightIcon, CheckIcon } from "../icons";
@@ -19,6 +19,8 @@ export function StyleCustomizer({ service, value, quote, onChange, onContinue }:
   const paidHair = selectedHair.perBundleCents > 0;
   const fixedBundles = service.hairBundles;
   const total = service.priceCents + quote.totalCents;
+  const policy = asHairPolicy(service.hair);
+  const hairOptions = hairOptionsFor(policy);
 
   return (
     <div className="mt-8 overflow-hidden rounded-3xl bg-white shadow-xl ring-2 ring-gold-400" id="customize">
@@ -34,11 +36,23 @@ export function StyleCustomizer({ service, value, quote, onChange, onContinue }:
 
       <div className="grid gap-8 p-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-7">
+          {service.note && (
+            <p className="flex gap-2 rounded-2xl bg-gold-200/50 p-4 text-sm font-medium text-navy-900 ring-1 ring-gold-400/60">
+              <span aria-hidden="true">💡</span>
+              {service.note}
+            </p>
+          )}
+
+          {policy === "none" && (
+            <p className="rounded-2xl bg-cream p-4 text-sm text-navy-900/70">No add-ons needed for this service — just choose your date and time.</p>
+          )}
+
           {/* Hair */}
+          {policy !== "none" && (
           <fieldset>
             <legend className="mb-3 font-semibold text-navy-900">Hair</legend>
             <div className="grid gap-3 sm:grid-cols-2">
-              {HAIR_OPTIONS.map((o) => {
+              {hairOptions.map((o) => {
                 const active = o.id === value.hair;
                 return (
                   <label
@@ -104,8 +118,10 @@ export function StyleCustomizer({ service, value, quote, onChange, onContinue }:
               </div>
             )}
           </fieldset>
+          )}
 
           {/* Color */}
+          {policy !== "none" && (
           <fieldset>
             <legend className="mb-3 font-semibold text-navy-900">Color</legend>
             <label
@@ -125,6 +141,7 @@ export function StyleCustomizer({ service, value, quote, onChange, onContinue }:
               </span>
             </label>
           </fieldset>
+          )}
         </div>
 
         {/* Live summary */}

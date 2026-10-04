@@ -92,19 +92,19 @@ export const FAQS: Faq[] = [
   {
     topic: "styles",
     q: "What styles do you offer?",
-    a: "Knotless braids, boho and curly styles, box braids, cornrows and stitch braids, twists and locs, and kids styles. Browse the full menu by category.",
+    a: "Knotless braids, boho and curly styles, box braids, cornrows and stitch braids, twists and crochet, kids styles, men braids and braid take-out. Browse the full menu by category.",
     link: { href: "/styles", label: "See all styles" },
   },
   {
     topic: "styles",
     q: "Is braiding hair included in the price?",
-    a: "Yes, except for passion twists and crochet styles. When you book you can upgrade to 100% human hair ($80 per bundle) or blended hair ($50 per bundle), or bring your own. A mix of 2+ colors adds $20.",
+    a: "Yes for most styles. Hair is not provided for kinky twists, passion twists and crochet, so please bring your own, and for Bora Bora and Mermaid braids please bring your boho (curly) hair. When you book you can upgrade to 100% human hair ($80 per bundle) or blended hair ($50 per bundle), or bring your own. A mix of 2+ colors adds $20.",
     link: { href: "/policies#pricing", label: "Pricing & hair" },
   },
   {
     topic: "styles",
     q: "Do you braid children's hair?",
-    a: "Yes — see the Kids category on the style menu.",
+    a: "Yes — kids knotless braids (ages 6 to 12) and kids cornrows (ages 8 to 13). See the Kids category on the style menu.",
     link: { href: "/styles?category=kids", label: "Kids styles" },
   },
 

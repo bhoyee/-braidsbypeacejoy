@@ -38,6 +38,9 @@ export function ServiceCard({ service, index = 0 }: { service: PublicService; in
 
       <div className="flex flex-1 flex-col gap-4 p-5">
         {service.description && <p className="text-sm leading-relaxed text-navy-900/70">{service.description}</p>}
+        {service.note && (
+          <p className="-mt-1 rounded-xl bg-gold-200/50 px-3 py-2 text-xs font-semibold text-navy-900 ring-1 ring-gold-400/50">💡 {service.note}</p>
+        )}
         <dl className="mt-auto grid grid-cols-2 gap-3 text-sm">
           <div className="rounded-xl bg-cream px-3 py-2">
             <dt className="text-[11px] uppercase tracking-wider text-royal-700/70">Full price</dt>
