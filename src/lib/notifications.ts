@@ -348,7 +348,7 @@ export async function notifyManualPayment(b: BookingWithService, amountCents: nu
 /** "How was your visit?" — asks for a Google review and a social-media tag. */
 export async function notifyReviewRequest(b: BookingWithService) {
   const d = details(b);
-  const google = process.env.GOOGLE_REVIEW_URL?.trim();
+  const google = process.env.GOOGLE_REVIEW_URL?.trim() || SALON.googleReviewUrl;
   const unsub = unsubscribeUrl(b.clientEmail);
   const html = renderEmail({
     preheader: `Thank you for visiting, ${d.firstName}! A quick review means the world to us.`,
@@ -357,7 +357,7 @@ export async function notifyReviewRequest(b: BookingWithService) {
     intro:
       "Thank you for trusting us with your hair! If you enjoyed your visit, a quick review helps other women find us — it only takes a minute.",
     buttons: [
-      { label: "⭐ Leave a Google review", href: google || SALON.mapsUrl, primary: true },
+      { label: "⭐ Leave a Google review", href: google, primary: true },
       { label: "Tag us on Instagram", href: SALON.socials.instagram },
       { label: "Tag us on TikTok", href: SALON.socials.tiktok },
     ],
@@ -368,7 +368,7 @@ export async function notifyReviewRequest(b: BookingWithService) {
     `Thank you for visiting, ${d.firstName}!`,
     "",
     "If you enjoyed your visit, a quick review helps other women find us:",
-    google || SALON.mapsUrl,
+    google,
     "",
     `Share your new look and tag us on Instagram: ${SALON.socials.instagram}`,
     `or TikTok: ${SALON.socials.tiktok}`,

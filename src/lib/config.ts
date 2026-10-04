@@ -6,6 +6,8 @@ export const SALON = {
   suite: "PHENIX Salon Suite 101",
   fullAddress: "8700 Liberty Rd, Randallstown, MD (PHENIX Salon Suite 101)",
   mapsUrl: "https://www.google.com/maps/search/?api=1&query=8700+Liberty+Rd+Randallstown+MD+21133",
+  // Opens the "write a review" box on the salon's Google listing (Braidsbypeacejoy LLC).
+  googleReviewUrl: "https://search.google.com/local/writereview?placeid=ChIJBaJWg6QZyIkR_uPkhDNgKwg",
   timeZone: "America/New_York",
   phone: "410-671-1788",
   phoneHref: "tel:+14106711788",

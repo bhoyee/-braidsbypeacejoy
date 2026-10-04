@@ -131,7 +131,7 @@ env_default() {
   grep -q "^$1=" .env || { printf '%s="%s"\n' "$1" "$2" >> .env; log "Added $1 to .env (default: \"$2\")"; }
 }
 env_default RETENTION_DAYS "90"         # days after the last visit before the "time for a refresh?" email
-env_default GOOGLE_REVIEW_URL ""        # Google Business Profile → "Ask for reviews" link; empty = Google Maps
+env_default GOOGLE_REVIEW_URL ""        # optional override; empty = built-in link to the salon's Google review form
 
 # ── 3. Database schema + packages ───────────────────────────────────────────
 # CloudLinux keeps packages in the Node environment ($VENV/lib/node_modules) and
