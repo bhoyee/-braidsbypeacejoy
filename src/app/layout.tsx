@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
   },
-  icons: { icon: "/assets/logo2.png", apple: "/assets/logo2.png" },
+  // Favicons come from src/app/favicon.ico, icon.png and apple-icon.png (square, white background).
   // Paste the code from Google Search Console / Bing Webmaster Tools into these env vars.
   verification: {
     google: process.env.GOOGLE_SITE_VERIFICATION,
