@@ -35,14 +35,26 @@ export async function visitNumbers(bookings: { id: string; clientEmail: string; 
   );
 }
 
-/** Every booking this client has made (newest first), for the owner's history view. */
-export async function clientHistory(email: string) {
-  return prisma.booking.findMany({
-    where: { clientEmail: email.toLowerCase(), paymentStatus: { in: ["DEPOSIT_PAID", "FULLY_SETTLED", "CANCELLED", "REFUNDED"] } },
+export const HISTORY_PAGE = 10;
+
+/** This client's other bookings (newest first), one page at a time, for the owner's history view. */
+export async function clientHistory(email: string, excludeId: string, page = 1) {
+  const where: Prisma.BookingWhereInput = {
+    clientEmail: email.toLowerCase(),
+    id: { not: excludeId },
+    paymentStatus: { in: ["DEPOSIT_PAID", "FULLY_SETTLED", "CANCELLED", "REFUNDED"] },
+  };
+  const total = await prisma.booking.count({ where });
+  const pageCount = Math.max(1, Math.ceil(total / HISTORY_PAGE));
+  const current = Math.min(Math.max(1, page), pageCount);
+  const items = await prisma.booking.findMany({
+    where,
     orderBy: { appointmentAt: "desc" },
-    take: 50,
+    skip: (current - 1) * HISTORY_PAGE,
+    take: HISTORY_PAGE,
     include: { service: true },
   });
+  return { items, total, page: current, pageCount };
 }
 
 /* ------------------------------------------------------------------ */

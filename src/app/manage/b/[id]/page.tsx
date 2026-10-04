@@ -5,16 +5,23 @@ import { ClientBadge, StatusBadges } from "@/components/manage/StatusBadges";
 import { addOnsSummary } from "@/lib/addons";
 import { isAdmin } from "@/lib/admin-auth";
 import { clientHistory, isUnsubscribed, visitNumbers } from "@/lib/clients";
-import { getBooking, PAYMENT_METHODS } from "@/lib/manage";
+import { bookingActivity, getBooking, PAYMENT_METHODS } from "@/lib/manage";
 import { formatDuration, formatSalonDate, formatSalonTime, formatUSD, salonDateKey } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
 const METHOD_LABEL: Record<string, string> = { STRIPE: "Card (online)", ...Object.fromEntries(PAYMENT_METHODS.map((m) => [m.id, m.label])) };
 
-export default async function BookingPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function BookingPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ hp?: string; ap?: string }>;
+}) {
   if (!(await isAdmin())) redirect("/manage");
   const { id } = await params;
+  const sp = await searchParams;
   const b = await getBooking(id);
   if (!b) notFound();
 
@@ -23,12 +30,19 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
   const started = b.appointmentAt <= new Date();
   const addOns = addOnsSummary(b);
   const digits = b.clientPhone.replace(/\D/g, "");
-  const [history, visitNo, unsubscribed] = await Promise.all([
-    clientHistory(b.clientEmail),
+  const [history, activity, visitNo, unsubscribed] = await Promise.all([
+    clientHistory(b.clientEmail, b.id, Number(sp.hp) || 1),
+    bookingActivity(b.id, Number(sp.ap) || 1),
     visitNumbers([b]).then((m) => m.get(b.id) ?? 1),
     isUnsubscribed(b.clientEmail),
   ]);
-  const others = history.filter((h) => h.id !== b.id);
+  // Page links keep the other table's page and jump straight back to the table.
+  const pageHref = (hp: number, ap: number, anchor: string) => {
+    const q = new URLSearchParams();
+    if (hp > 1) q.set("hp", String(hp));
+    if (ap > 1) q.set("ap", String(ap));
+    return `/manage/b/${b.id}${q.size ? `?${q}` : ""}#${anchor}`;
+  };
   const canRefund = b.payments.some((p) => p.kind === "DEPOSIT" && p.status === "PAID" && p.method === "STRIPE" && p.stripePaymentIntentId);
 
   return (
@@ -115,19 +129,21 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
         {active && !b.outcome && <CancelForm id={b.id} canRefund={canRefund} />}
       </div>
 
-      <section className="mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-900/5">
+      <section id="history" className="mt-6 scroll-mt-32 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-900/5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-display text-xl text-navy-900">Client history</h2>
+          <h2 className="font-display text-xl text-navy-900">
+            Client history {history.total > 0 && <span className="text-sm font-normal text-navy-900/50">· {history.total} other booking{history.total === 1 ? "" : "s"}</span>}
+          </h2>
           <p className="text-xs text-navy-900/50">
             Matched by email · follow-up emails {unsubscribed ? <strong className="text-red-700">unsubscribed</strong> : "on"}
             {b.reviewRequestSentAt && <> · review request sent {formatSalonDate(b.reviewRequestSentAt).split(",").slice(1).join(",")}</>}
           </p>
         </div>
-        {others.length === 0 ? (
+        {history.total === 0 ? (
           <p className="mt-2 text-sm text-navy-900/60">First booking with this email — a new client.</p>
         ) : (
           <ul className="mt-3 divide-y divide-navy-900/5 text-sm">
-            {others.map((h) => (
+            {history.items.map((h) => (
               <li key={h.id}>
                 <Link href={`/manage/b/${h.id}`} className="flex flex-wrap items-center justify-between gap-2 py-2 hover:text-royal-700">
                   <span>
@@ -140,13 +156,16 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
             ))}
           </ul>
         )}
+        <MiniPager page={history.page} count={history.pageCount} href={(n) => pageHref(n, activity.page, "history")} />
       </section>
 
-      {b.activity.length > 0 && (
-        <section className="mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-900/5">
-          <h2 className="font-display text-xl text-navy-900">Activity</h2>
+      {activity.total > 0 && (
+        <section id="activity" className="mt-6 scroll-mt-32 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-900/5">
+          <h2 className="font-display text-xl text-navy-900">
+            Activity <span className="text-sm font-normal text-navy-900/50">· {activity.total} event{activity.total === 1 ? "" : "s"}</span>
+          </h2>
           <ul className="mt-3 space-y-2 text-sm">
-            {b.activity.map((a) => (
+            {activity.items.map((a) => (
               <li key={a.id} className="flex gap-3">
                 <span className="w-40 shrink-0 text-navy-900/50">
                   {formatSalonDate(a.createdAt).split(",").slice(1).join(",")} {formatSalonTime(a.createdAt)}
@@ -158,9 +177,37 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
               </li>
             ))}
           </ul>
+          <MiniPager page={activity.page} count={activity.pageCount} href={(n) => pageHref(history.page, n, "activity")} />
         </section>
       )}
     </div>
+  );
+}
+
+/** "← Newer · Page 2 of 4 · Older →" under a table (hidden when it fits on one page). */
+function MiniPager({ page, count, href }: { page: number; count: number; href: (n: number) => string }) {
+  if (count <= 1) return null;
+  const btn = "rounded-full px-4 py-2 text-xs font-semibold ring-1 ring-navy-900/10 transition";
+  return (
+    <nav aria-label="Pages" className="mt-4 flex items-center justify-between gap-3 border-t border-navy-900/5 pt-4 text-sm">
+      {page > 1 ? (
+        <Link href={href(page - 1)} scroll={false} className={`${btn} bg-white text-royal-700 hover:bg-gold-200/60`}>
+          ← Newer
+        </Link>
+      ) : (
+        <span className={`${btn} text-navy-900/30`}>← Newer</span>
+      )}
+      <span className="text-xs text-navy-900/60">
+        Page {page} of {count}
+      </span>
+      {page < count ? (
+        <Link href={href(page + 1)} scroll={false} className={`${btn} bg-white text-royal-700 hover:bg-gold-200/60`}>
+          Older →
+        </Link>
+      ) : (
+        <span className={`${btn} text-navy-900/30`}>Older →</span>
+      )}
+    </nav>
   );
 }
 

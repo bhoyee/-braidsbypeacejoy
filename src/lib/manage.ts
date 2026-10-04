@@ -97,9 +97,24 @@ export async function getBooking(id: string) {
     include: {
       service: true,
       payments: { where: { status: { in: ["PAID", "REFUNDED"] } }, orderBy: { createdAt: "asc" } },
-      activity: { orderBy: { createdAt: "desc" }, take: 30 },
     },
   });
+}
+
+export const ACTIVITY_PAGE = 10;
+
+/** A booking's activity log (newest first), one page at a time. */
+export async function bookingActivity(bookingId: string, page = 1) {
+  const total = await prisma.activityLog.count({ where: { bookingId } });
+  const pageCount = Math.max(1, Math.ceil(total / ACTIVITY_PAGE));
+  const current = Math.min(Math.max(1, page), pageCount);
+  const items = await prisma.activityLog.findMany({
+    where: { bookingId },
+    orderBy: { createdAt: "desc" },
+    skip: (current - 1) * ACTIVITY_PAGE,
+    take: ACTIVITY_PAGE,
+  });
+  return { items, total, page: current, pageCount };
 }
 
 async function log(bookingId: string, action: string, detail?: string) {
