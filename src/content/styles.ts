@@ -106,7 +106,7 @@ export const STYLES: StyleEntry[] = [
     category: "knotless",
     priceCents: 40000,
     durationMin: 480,
-    imageUrl: "/assets/styles/xtra-small-knotless.jpg",
+    imageUrl: "/assets/styles/xtra-small-knotless-2.jpg",
     note: "7 to 8 hours, depending on the length.",
     description: "Micro-fine knotless braids for maximum versatility and a long-lasting style.",
   },
