@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { renderEmail, siteBase } from "./email-template";
 import { sendEmail } from "./notifications";
 import { prisma } from "./prisma";
-import { secret as envValue } from "./secrets";
+import { adminEmails } from "./secrets";
 
 // Owner sign-in for /manage: one-time email links + a signed session cookie.
 // No passwords. Only the owner email (ADMIN_EMAIL) can ever receive a link.
@@ -23,14 +23,14 @@ function secret(): string | null {
   return process.env.CRON_SECRET ? sha256(`bbpj-admin-session:${process.env.CRON_SECRET}`) : null;
 }
 
-export function ownerEmail(): string | null {
+export function ownerEmails(): string[] {
   // Same source as the booking alerts (the .env file as written), so a changed
   // ADMIN_EMAIL works straight away, without restarting the app.
-  return envValue("ADMIN_EMAIL")?.toLowerCase() || null;
+  return adminEmails();
 }
 
 export function adminConfigured() {
-  return Boolean(secret() && ownerEmail());
+  return Boolean(secret() && ownerEmails().length);
 }
 
 async function sessionVersion(): Promise<string> {
@@ -85,12 +85,13 @@ export async function signOutEverywhere() {
 }
 
 /**
- * Emails a one-time sign-in link — but only if `email` is the owner address.
+ * Emails a one-time sign-in link — but only if `email` is one of the ADMIN_EMAIL addresses
+ * (the link goes to that same address).
  * Always resolves the same way so the form can't be used to discover the address.
  */
 export async function requestLoginLink(email: string) {
-  const owner = ownerEmail();
-  if (!owner || !secret() || email.trim().toLowerCase() !== owner) return;
+  const owner = ownerEmails().find((e) => e === email.trim().toLowerCase());
+  if (!owner || !secret()) return;
 
   const recent = await prisma.adminLoginToken.count({ where: { createdAt: { gt: new Date(Date.now() - 15 * 60_000) } } });
   if (recent >= MAX_LINKS_PER_15_MIN) return;

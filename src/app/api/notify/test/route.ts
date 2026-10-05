@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SALON } from "@/lib/config";
 import { sendEmail, sendWhatsAppAlert } from "@/lib/notifications";
-import { secret as envValue } from "@/lib/secrets";
+import { adminEmails, secret as envValue } from "@/lib/secrets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
   try {
     if (channel === "email") {
-      const to = envValue("ADMIN_EMAIL");
+      const to = adminEmails().join(", ");
       if (!to) return NextResponse.json({ ok: false, error: "ADMIN_EMAIL is not set" }, { status: 400 });
       if (!envValue("SMTP_HOST")) return NextResponse.json({ ok: false, error: "SMTP is not configured" }, { status: 400 });
       await sendEmail(to, "✅ Test email from your booking website", `<p>Email alerts are working (${stamp}).</p>`, `Email alerts are working (${stamp}).`);

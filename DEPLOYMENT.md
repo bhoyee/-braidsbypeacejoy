@@ -136,7 +136,7 @@ The server is in London, so US visitors get a slight delay. Two ways to fix it:
 
 ## Owner area — Manage Bookings (`/manage`)
 
-- Go to `https://braidsbypeacejoy.com/manage`, type the owner email (`ADMIN_EMAIL` in `.env`) and tap the link that arrives (valid 15 minutes, one use). You stay signed in for 30 days on that device.
+- Go to `https://braidsbypeacejoy.com/manage`, type an owner email (`ADMIN_EMAIL` in `.env` — one address, or several separated by commas; each can sign in and gets the alerts) and tap the link that arrives (valid 15 minutes, one use). You stay signed in for 30 days on that device.
 - Any other email address gets the same "check your inbox" reply but no link is ever sent.
 - "Sign out everywhere" logs out every phone/computer at once (use it if a device is lost).
 - From a booking you can: record Cash App / Zelle / cash payments (client gets a receipt), mark completed or no-show (deposit kept), cancel (client is emailed; the deposit is kept unless you tick "Refund the deposit"), and keep private notes.

@@ -12,7 +12,7 @@ import {
 } from "@/lib/admin-auth";
 import { cancelBooking, recordPayment, rescheduleBooking, rescheduleSlots, saveNotes, setOutcome } from "@/lib/manage";
 import { sendEmail, sendWhatsAppAlert } from "@/lib/notifications";
-import { secret } from "@/lib/secrets";
+import { adminEmails } from "@/lib/secrets";
 
 // Server actions for /manage. Next.js only accepts these from this site's own pages
 // (Origin check), and every booking action re-checks the owner session.
@@ -101,7 +101,7 @@ export async function testAlertAction(_prev: ActionState, form: FormData): Promi
   const stamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
   try {
     if (channel === "email") {
-      const to = secret("ADMIN_EMAIL");
+      const to = adminEmails().join(", ");
       if (!to) return { ok: false, error: "ADMIN_EMAIL is not set in the server .env." };
       const r = await sendEmail(to, "✅ Test alert — Braids by Peace Joy", `<p>Email alerts are working (${stamp}).</p>`, `Email alerts are working (${stamp}).`);
       if (r === "skipped") return { ok: false, error: "Email isn't set up: SMTP_HOST is missing from the server .env." };

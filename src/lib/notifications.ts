@@ -2,7 +2,7 @@ import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import type { Booking, Service } from "@prisma/client";
 import { addOnsSummary } from "./addons";
-import { secret } from "./secrets";
+import { adminEmails, secret } from "./secrets";
 import { priorVisits, unsubscribeHeaders, unsubscribeUrl } from "./clients";
 import { DEPOSIT_CENTS, SALON } from "./config";
 import { esc, googleCalendarLink, renderEmail, siteBase, type EmailButton, type EmailRow } from "./email-template";
@@ -91,7 +91,7 @@ type Job = { label: string; run: () => Promise<Delivery> };
 
 /** Owner alerts for a booking: email (ADMIN_EMAIL) + WhatsApp (CallMeBot). */
 function ownerJobs(subject: string, html: string, text: string, whatsapp: string): Job[] {
-  const admin = secret("ADMIN_EMAIL");
+  const admin = adminEmails().join(", ");
   return [
     { label: "Owner email", run: async () => (admin ? sendEmail(admin, subject, html, text) : Promise.reject(new Error("ADMIN_EMAIL is not set"))) },
     { label: "Owner WhatsApp", run: () => sendWhatsAppAlert(whatsapp) },
@@ -416,7 +416,7 @@ export async function notifyAdminRefund(b: BookingWithService, cents: number) {
     ],
   });
   const jobs: Promise<unknown>[] = [];
-  const admin = secret("ADMIN_EMAIL");
+  const admin = adminEmails().join(", ");
   if (admin) jobs.push(sendEmail(admin, "⚠️ Payment auto-refunded — please follow up", html, msg));
   jobs.push(sendWhatsAppAlert(`⚠️ ${msg}`));
   await dispatch(jobs);

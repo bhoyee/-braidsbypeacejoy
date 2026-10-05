@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { TestAlert } from "@/components/manage/TestAlert";
 import { isAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
-import { envFileChangedAt, mangledByEnvLoader, secret } from "@/lib/secrets";
+import { adminEmails, envFileChangedAt, mangledByEnvLoader, secret } from "@/lib/secrets";
 import { formatSalonDate, formatSalonTime } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ export default async function AlertsPage() {
   if (!(await isAdmin())) redirect("/manage");
   // Email / WhatsApp values exactly as the alerts read them (straight from .env).
   const env = {
-    ADMIN_EMAIL: secret("ADMIN_EMAIL"),
+    ADMIN_EMAIL: adminEmails().join(", ") || undefined,
     SMTP_HOST: secret("SMTP_HOST"),
     SMTP_PORT: secret("SMTP_PORT"),
     SMTP_USER: secret("SMTP_USER"),
@@ -30,7 +30,7 @@ export default async function AlertsPage() {
   const changedAt = envFileChangedAt();
 
   const checks = [
-    { group: "Email", label: "Owner email (ADMIN_EMAIL)", ok: !!env.ADMIN_EMAIL, value: env.ADMIN_EMAIL ?? "missing" },
+    { group: "Email", label: "Owner email(s) (ADMIN_EMAIL)", ok: !!env.ADMIN_EMAIL, value: env.ADMIN_EMAIL ?? "missing" },
     { group: "Email", label: "Mail server (SMTP_HOST)", ok: !!env.SMTP_HOST, value: env.SMTP_HOST ? `${env.SMTP_HOST}:${env.SMTP_PORT ?? 465}` : "missing" },
     {
       group: "Email",

@@ -58,3 +58,19 @@ export function envFileChangedAt(): Date | null {
     return null;
   }
 }
+
+/**
+ * Owner/admin addresses from ADMIN_EMAIL — one, or several separated by commas:
+ *   ADMIN_EMAIL="owner@gmail.com, manager@gmail.com"
+ * Every address can sign in to Manage Bookings and receives the owner alerts.
+ */
+export function adminEmails(): string[] {
+  return [
+    ...new Set(
+      (secret("ADMIN_EMAIL") ?? "")
+        .split(/[,;\s]+/)
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)),
+    ),
+  ];
+}
