@@ -125,12 +125,12 @@ if [ -z "$(env_get ADMIN_EMAIL)" ]; then
 fi
 
 STRIPE_KEY="$(env_get STRIPE_SECRET_KEY)"
-if [[ "$STRIPE_KEY" != sk_* ]]; then
-  echo "  Stripe secret key (Stripe → Developers → API keys). Starts with sk_test_ or sk_live_."
+if [[ "$STRIPE_KEY" != sk_* && "$STRIPE_KEY" != rk_* ]]; then
+  echo "  Stripe secret key (Stripe → Developers → API keys). Starts with sk_ (full access) or rk_ (restricted key)."
   STRIPE_KEY="$(ask_secret "Paste it (hidden; Enter to skip for now):")"
-  if [[ "$STRIPE_KEY" == sk_* ]]; then env_set STRIPE_SECRET_KEY "$STRIPE_KEY"; ok "Stripe key saved"; else STRIPE_KEY=""; note "Stripe skipped — online payments won't work until you re-run this setup with a key"; fi
+  if [[ "$STRIPE_KEY" == sk_* || "$STRIPE_KEY" == rk_* ]]; then env_set STRIPE_SECRET_KEY "$STRIPE_KEY"; ok "Stripe key saved"; else STRIPE_KEY=""; note "Stripe skipped — online payments won't work until you re-run this setup with a key"; fi
 else
-  ok "Stripe key already set ($( [[ "$STRIPE_KEY" == sk_live_* ]] && echo live || echo test ) mode)"
+  ok "Stripe key already set ($( [[ "$STRIPE_KEY" == ?k_live_* ]] && echo live || echo test ) mode)"
 fi
 ok "Settings saved to $ENV_FILE (private to your account)"
 
@@ -193,7 +193,7 @@ else
   # Key goes in via stdin config, so it never appears in the process list.
   stripe_api() { curl -fsS -K - "$@" <<<"user = \"$STRIPE_KEY:\""; }
   stripe_api https://api.stripe.com/v1/balance >/dev/null 2>&1 \
-    || die "Stripe rejected that secret key. Check it in Stripe → Developers → API keys, then re-run this setup."
+    || die "Stripe rejected that key (a restricted rk_ key needs Balance: Read). Check it in Stripe → Developers → API keys, then re-run this setup."
   # The signing secret is only shown when an endpoint is created, so replace any old one for this URL.
   for id in $(stripe_api "https://api.stripe.com/v1/webhook_endpoints?limit=100" | jget "d.data.filter(e=>e.url===\"$WEBHOOK_URL\").map(e=>e.id).join(\" \")"); do
     stripe_api -X DELETE "https://api.stripe.com/v1/webhook_endpoints/$id" >/dev/null && note "Replaced an older webhook for this URL"
@@ -203,7 +203,7 @@ else
     -d "enabled_events[]=checkout.session.completed" \
     -d "enabled_events[]=checkout.session.async_payment_succeeded" \
     -d "enabled_events[]=checkout.session.expired" | jget 'd.secret')"
-  [[ "$WH_SECRET" == whsec_* ]] || die "Stripe didn't return a webhook secret — check the key is correct and has full access."
+  [[ "$WH_SECRET" == whsec_* ]] || die "Stripe didn't return a webhook secret — check the key is correct (a restricted rk_ key needs Webhook Endpoints: Write)."
   env_set STRIPE_WEBHOOK_SECRET "$WH_SECRET"
   ok "Webhook created → $WEBHOOK_URL"
 fi

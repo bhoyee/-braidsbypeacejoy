@@ -45,8 +45,12 @@ export default async function AlertsPage() {
     {
       group: "Payments",
       label: "Stripe key (STRIPE_SECRET_KEY)",
-      ok: /^sk_(live|test)_/.test(stripeKey),
-      value: stripeKey.startsWith("sk_live_") ? "live mode" : stripeKey.startsWith("sk_test_") ? "TEST mode — no real payments" : "missing — bookings can't be paid, so no alerts are sent",
+      ok: /^[sr]k_(live|test)_/.test(stripeKey),
+      value: /^[sr]k_live_/.test(stripeKey)
+        ? `live mode${stripeKey.startsWith("rk_") ? " (restricted key)" : ""}`
+        : /^[sr]k_test_/.test(stripeKey)
+          ? "TEST mode — no real payments"
+          : "missing — bookings can't be paid, so no alerts are sent",
     },
     { group: "Payments", label: "Stripe webhook (STRIPE_WEBHOOK_SECRET)", ok: !!env.STRIPE_WEBHOOK_SECRET, value: env.STRIPE_WEBHOOK_SECRET ? "set" : "missing" },
   ];
