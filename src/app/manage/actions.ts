@@ -12,6 +12,7 @@ import {
 } from "@/lib/admin-auth";
 import { cancelBooking, recordPayment, rescheduleBooking, rescheduleSlots, saveNotes, setOutcome } from "@/lib/manage";
 import { sendEmail, sendWhatsAppAlert } from "@/lib/notifications";
+import { secret } from "@/lib/secrets";
 
 // Server actions for /manage. Next.js only accepts these from this site's own pages
 // (Origin check), and every booking action re-checks the owner session.
@@ -100,7 +101,7 @@ export async function testAlertAction(_prev: ActionState, form: FormData): Promi
   const stamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
   try {
     if (channel === "email") {
-      const to = process.env.ADMIN_EMAIL?.trim();
+      const to = secret("ADMIN_EMAIL");
       if (!to) return { ok: false, error: "ADMIN_EMAIL is not set in the server .env." };
       const r = await sendEmail(to, "✅ Test alert — Braids by Peace Joy", `<p>Email alerts are working (${stamp}).</p>`, `Email alerts are working (${stamp}).`);
       if (r === "skipped") return { ok: false, error: "Email isn't set up: SMTP_HOST is missing from the server .env." };
@@ -110,6 +111,10 @@ export async function testAlertAction(_prev: ActionState, form: FormData): Promi
     if (r === "skipped") return { ok: false, error: "WhatsApp isn't set up: WHATSAPP_ALERT_NUMBER or CALLMEBOT_API_KEY is missing from the server .env." };
     return { ok: true, message: "CallMeBot accepted the message. It usually arrives within a minute (sometimes a few)." };
   } catch (err) {
-    return { ok: false, error: `Failed: ${(err as Error).message}` };
+    const msg = (err as Error).message;
+    const hint = /535|auth/i.test(msg)
+      ? ` — the mail server rejected the login. Check SMTP_USER is the full mailbox address (e.g. bookings@braidsbypeacejoy.com) and SMTP_PASS is that mailbox's current password (cPanel → Email Accounts → Manage → Password).`
+      : "";
+    return { ok: false, error: `Failed: ${msg}${hint}` };
   }
 }

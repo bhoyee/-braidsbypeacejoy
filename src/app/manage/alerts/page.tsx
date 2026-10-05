@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { TestAlert } from "@/components/manage/TestAlert";
 import { isAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
+import { envFileChangedAt, mangledByEnvLoader, secret } from "@/lib/secrets";
 import { formatSalonDate, formatSalonTime } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -12,13 +13,33 @@ const mask = (v: string | undefined, keep = 4) => (v ? `${"•".repeat(Math.max(
 /** Owner-only check of how booking alerts are set up, with test buttons and recent results. */
 export default async function AlertsPage() {
   if (!(await isAdmin())) redirect("/manage");
-  const env = process.env;
-  const stripeKey = env.STRIPE_SECRET_KEY ?? "";
+  // Email / WhatsApp values exactly as the alerts read them (straight from .env).
+  const env = {
+    ADMIN_EMAIL: secret("ADMIN_EMAIL"),
+    SMTP_HOST: secret("SMTP_HOST"),
+    SMTP_PORT: secret("SMTP_PORT"),
+    SMTP_USER: secret("SMTP_USER"),
+    SMTP_PASS: secret("SMTP_PASS"),
+    WHATSAPP_ALERT_NUMBER: secret("WHATSAPP_ALERT_NUMBER"),
+    CALLMEBOT_API_KEY: secret("CALLMEBOT_API_KEY"),
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+  };
+  const stripeKey = process.env.STRIPE_SECRET_KEY ?? "";
+  const userLooksWrong = !!env.SMTP_USER && !env.SMTP_USER.includes("@");
+  const specialChars = !!env.SMTP_PASS && /[$#"'\\]/.test(env.SMTP_PASS);
+  const changedAt = envFileChangedAt();
 
   const checks = [
     { group: "Email", label: "Owner email (ADMIN_EMAIL)", ok: !!env.ADMIN_EMAIL, value: env.ADMIN_EMAIL ?? "missing" },
     { group: "Email", label: "Mail server (SMTP_HOST)", ok: !!env.SMTP_HOST, value: env.SMTP_HOST ? `${env.SMTP_HOST}:${env.SMTP_PORT ?? 465}` : "missing" },
-    { group: "Email", label: "Mailbox login (SMTP_USER / SMTP_PASS)", ok: !!(env.SMTP_USER && env.SMTP_PASS), value: env.SMTP_USER ? `${env.SMTP_USER} · password ${env.SMTP_PASS ? "set" : "missing"}` : "missing" },
+    {
+      group: "Email",
+      label: "Mailbox login (SMTP_USER / SMTP_PASS)",
+      ok: !!(env.SMTP_USER && env.SMTP_PASS) && !userLooksWrong,
+      value: env.SMTP_USER
+        ? `${env.SMTP_USER}${userLooksWrong ? " (should be the full email address)" : ""} · password ${env.SMTP_PASS ? `set, ${env.SMTP_PASS.length} characters` : "missing"}`
+        : "missing",
+    },
     { group: "WhatsApp", label: "Alert number (WHATSAPP_ALERT_NUMBER)", ok: !!env.WHATSAPP_ALERT_NUMBER, value: env.WHATSAPP_ALERT_NUMBER ?? "missing" },
     { group: "WhatsApp", label: "CallMeBot key (CALLMEBOT_API_KEY)", ok: !!env.CALLMEBOT_API_KEY, value: env.CALLMEBOT_API_KEY ? mask(env.CALLMEBOT_API_KEY, 3) : "missing" },
     {
@@ -69,7 +90,16 @@ export default async function AlertsPage() {
             </li>
           ))}
         </ul>
-        <p className="mt-3 text-xs text-navy-900/50">Changed the server .env? The app reads it when it starts, so restart it (or wait for the next update).</p>
+        {(specialChars || mangledByEnvLoader("SMTP_PASS")) && (
+          <p className="mt-3 rounded-xl bg-gold-200/50 p-3 text-xs text-navy-900">
+            The mailbox password contains special characters such as <code>$</code> or <code>#</code>. That&apos;s fine — alerts read it exactly as
+            written in .env. Just make sure it&apos;s inside double quotes: <code>SMTP_PASS=&quot;…&quot;</code>.
+          </p>
+        )}
+        <p className="mt-3 text-xs text-navy-900/50">
+          Email and WhatsApp settings are read from .env each time, so changes work straight away — no restart needed.
+          {changedAt && <> .env last saved {formatSalonDate(changedAt)} {formatSalonTime(changedAt)}.</>}
+        </p>
       </section>
 
       <section className="mt-6 grid gap-6 md:grid-cols-2">

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SALON } from "@/lib/config";
 import { sendEmail, sendWhatsAppAlert } from "@/lib/notifications";
+import { secret as envValue } from "@/lib/secrets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,17 +21,17 @@ export async function GET(req: NextRequest) {
 
   try {
     if (channel === "email") {
-      const to = process.env.ADMIN_EMAIL;
+      const to = envValue("ADMIN_EMAIL");
       if (!to) return NextResponse.json({ ok: false, error: "ADMIN_EMAIL is not set" }, { status: 400 });
-      if (!process.env.SMTP_HOST) return NextResponse.json({ ok: false, error: "SMTP is not configured" }, { status: 400 });
+      if (!envValue("SMTP_HOST")) return NextResponse.json({ ok: false, error: "SMTP is not configured" }, { status: 400 });
       await sendEmail(to, "✅ Test email from your booking website", `<p>Email alerts are working (${stamp}).</p>`, `Email alerts are working (${stamp}).`);
       return NextResponse.json({ ok: true, sentTo: to });
     }
-    if (!process.env.WHATSAPP_ALERT_NUMBER || !process.env.CALLMEBOT_API_KEY) {
+    if (!envValue("WHATSAPP_ALERT_NUMBER") || !envValue("CALLMEBOT_API_KEY")) {
       return NextResponse.json({ ok: false, error: "Set WHATSAPP_ALERT_NUMBER and CALLMEBOT_API_KEY in .env, then restart the app" }, { status: 400 });
     }
     await sendWhatsAppAlert(`✅ *Test alert* — ${SALON.name} website\nWhatsApp booking alerts are working (${stamp}).`);
-    return NextResponse.json({ ok: true, sentTo: process.env.WHATSAPP_ALERT_NUMBER });
+    return NextResponse.json({ ok: true, sentTo: envValue("WHATSAPP_ALERT_NUMBER") });
   } catch (err) {
     return NextResponse.json({ ok: false, error: (err as Error).message }, { status: 502 });
   }

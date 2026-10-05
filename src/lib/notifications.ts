@@ -2,6 +2,7 @@ import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import type { Booking, Service } from "@prisma/client";
 import { addOnsSummary } from "./addons";
+import { secret } from "./secrets";
 import { priorVisits, unsubscribeHeaders, unsubscribeUrl } from "./clients";
 import { DEPOSIT_CENTS, SALON } from "./config";
 import { esc, googleCalendarLink, renderEmail, siteBase, type EmailButton, type EmailRow } from "./email-template";
@@ -14,16 +15,20 @@ type BookingWithService = Booking & { service: Service };
 /* Email (cPanel mailbox) — if SMTP isn't configured, messages are logged. */
 /* ------------------------------------------------------------------ */
 
-let mailer: Transporter | null = null;
+// Settings come from secret() (the .env file exactly as written), so passwords with
+// "$" or "#" work and a changed password is picked up without restarting the app.
+let mailer: { key: string; transport: Transporter } | null = null;
 function getMailer(): Transporter | null {
-  if (!process.env.SMTP_HOST) return null;
-  mailer ??= nodemailer.createTransport({
-    host: process.env.SMTP_HOST, // e.g. mail.braidsbypeacejoy.com (cPanel)
-    port: Number(process.env.SMTP_PORT ?? 465),
-    secure: Number(process.env.SMTP_PORT ?? 465) === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
-  return mailer;
+  const host = secret("SMTP_HOST");
+  if (!host) return null;
+  const port = Number(secret("SMTP_PORT") ?? 465);
+  const user = secret("SMTP_USER");
+  const pass = secret("SMTP_PASS");
+  const key = JSON.stringify([host, port, user, pass]);
+  if (mailer?.key !== key) {
+    mailer = { key, transport: nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } }) };
+  }
+  return mailer.transport;
 }
 
 export type Delivery = "sent" | "skipped";
@@ -35,7 +40,7 @@ export async function sendEmail(to: string, subject: string, html: string, text:
     return "skipped";
   }
   await t.sendMail({
-    from: process.env.EMAIL_FROM ?? `"${SALON.name}" <${process.env.SMTP_USER}>`,
+    from: secret("EMAIL_FROM") ?? `"${SALON.name}" <${secret("SMTP_USER")}>`,
     to,
     subject,
     html,
@@ -51,8 +56,8 @@ export async function sendEmail(to: string, subject: string, html: string, text:
  * Setup: https://www.callmebot.com/blog/free-api-whatsapp-messages/
  */
 export async function sendWhatsAppAlert(text: string): Promise<Delivery> {
-  const phone = process.env.WHATSAPP_ALERT_NUMBER?.trim();
-  const apikey = process.env.CALLMEBOT_API_KEY?.trim();
+  const phone = secret("WHATSAPP_ALERT_NUMBER");
+  const apikey = secret("CALLMEBOT_API_KEY");
   if (!phone || !apikey) {
     console.info(`[whatsapp:skipped] ${text.split("\n")[0]}`);
     return "skipped";
@@ -77,7 +82,7 @@ type Job = { label: string; run: () => Promise<Delivery> };
 
 /** Owner alerts for a booking: email (ADMIN_EMAIL) + WhatsApp (CallMeBot). */
 function ownerJobs(subject: string, html: string, text: string, whatsapp: string): Job[] {
-  const admin = process.env.ADMIN_EMAIL?.trim();
+  const admin = secret("ADMIN_EMAIL");
   return [
     { label: "Owner email", run: async () => (admin ? sendEmail(admin, subject, html, text) : Promise.reject(new Error("ADMIN_EMAIL is not set"))) },
     { label: "Owner WhatsApp", run: () => sendWhatsAppAlert(whatsapp) },
@@ -401,7 +406,8 @@ export async function notifyAdminRefund(b: BookingWithService, cents: number) {
     ],
   });
   const jobs: Promise<unknown>[] = [];
-  if (process.env.ADMIN_EMAIL) jobs.push(sendEmail(process.env.ADMIN_EMAIL, "⚠️ Payment auto-refunded — please follow up", html, msg));
+  const admin = secret("ADMIN_EMAIL");
+  if (admin) jobs.push(sendEmail(admin, "⚠️ Payment auto-refunded — please follow up", html, msg));
   jobs.push(sendWhatsAppAlert(`⚠️ ${msg}`));
   await dispatch(jobs);
 }
