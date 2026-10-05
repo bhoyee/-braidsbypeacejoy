@@ -75,6 +75,8 @@ export async function sendWhatsAppAlert(text: string): Promise<Delivery> {
     .trim()
     .slice(0, 160);
   // CallMeBot answers 200 even for some errors, so check the text too.
+  if (/paused/i.test(body))
+    throw new Error(`CallMeBot: account paused — from the alert phone, send "resume" to CallMeBot on WhatsApp (+34 644 99 26 98) to switch it back on.`);
   if (!res.ok || /error|invalid|not\s+allowed|wrong/i.test(body)) throw new Error(`CallMeBot ${res.status}: ${reply}`);
   return `sent: CallMeBot replied "${reply || "(empty)"}" in ${((Date.now() - started) / 1000).toFixed(1)}s`;
 }
