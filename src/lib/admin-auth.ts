@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { renderEmail, siteBase } from "./email-template";
 import { sendEmail } from "./notifications";
 import { prisma } from "./prisma";
+import { secret as envValue } from "./secrets";
 
 // Owner sign-in for /manage: one-time email links + a signed session cookie.
 // No passwords. Only the owner email (ADMIN_EMAIL) can ever receive a link.
@@ -23,7 +24,9 @@ function secret(): string | null {
 }
 
 export function ownerEmail(): string | null {
-  return process.env.ADMIN_EMAIL?.trim().toLowerCase() || null;
+  // Same source as the booking alerts (the .env file as written), so a changed
+  // ADMIN_EMAIL works straight away, without restarting the app.
+  return envValue("ADMIN_EMAIL")?.toLowerCase() || null;
 }
 
 export function adminConfigured() {
