@@ -66,7 +66,11 @@ fi
 # Only one deploy at a time (a re-exec below already holds the lock).
 if [ -z "${BBPJ_REEXEC:-}" ]; then
   exec 9>"$DEPLOY_HOME/.lock"
-  flock -n 9 || exit 0
+  if [ "${DEPLOY_WAIT:-0}" = 1 ]; then
+    flock -w 900 9 || { echo "Another deploy is still running after 15 minutes — try again later."; exit 1; }   # setup script: wait its turn
+  else
+    flock -n 9 || exit 0   # cron: a deploy is already running, try again next time
+  fi
 fi
 
 # Remember this script as it was when it started (see the re-exec after fetching).

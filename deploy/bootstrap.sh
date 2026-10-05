@@ -222,7 +222,7 @@ else
   git -C "$DEPLOY_HOME/src" fetch --quiet --depth 1 origin deploy && git -C "$DEPLOY_HOME/src" reset --quiet --hard FETCH_HEAD
 fi
 rm -f "$DEPLOY_HOME/state/failed" "$DEPLOY_HOME/state/deployed"   # always (re)deploy the latest build here
-if ! bash "$DEPLOY_HOME/src/deploy/server-deploy.sh" </dev/null 2>&1 | tee -a "$DEPLOY_HOME/deploy.log" || [ ! -f "$DEPLOY_HOME/state/deployed" ]; then
+if ! DEPLOY_WAIT=1 bash "$DEPLOY_HOME/src/deploy/server-deploy.sh" </dev/null 2>&1 | tee -a "$DEPLOY_HOME/deploy.log" || [ ! -f "$DEPLOY_HOME/state/deployed" ]; then
   die "The first deploy did not complete — copy the messages above and send them to your developer."
 fi
 
