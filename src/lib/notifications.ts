@@ -31,7 +31,8 @@ function getMailer(): Transporter | null {
   return mailer.transport;
 }
 
-export type Delivery = "sent" | "skipped";
+/** "sent", "skipped" (not set up), or "sent: <service reply>" when the service says something useful. */
+export type Delivery = "sent" | "skipped" | `sent: ${string}`;
 
 export async function sendEmail(to: string, subject: string, html: string, text: string, headers?: Record<string, string>): Promise<Delivery> {
   const t = getMailer();
@@ -63,13 +64,19 @@ export async function sendWhatsAppAlert(text: string): Promise<Delivery> {
     return "skipped";
   }
   const url = `https://api.callmebot.com/whatsapp.php?${new URLSearchParams({ phone, text, apikey })}`;
+  const started = Date.now();
   const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
   const body = await res.text();
+  // CallMeBot's reply page echoes the phone, the text and a status line — keep only the status.
+  const reply = body
+    .replace(/<[^>]+>/g, " ")
+    .replace(/Message to:.*?Text to send:.*?(?=(Message|APIKey|ERROR|Error|You|The|Your))/is, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 160);
   // CallMeBot answers 200 even for some errors, so check the text too.
-  if (!res.ok || /error|invalid|not\s+allowed|wrong/i.test(body)) {
-    throw new Error(`CallMeBot ${res.status}: ${body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200)}`);
-  }
-  return "sent";
+  if (!res.ok || /error|invalid|not\s+allowed|wrong/i.test(body)) throw new Error(`CallMeBot ${res.status}: ${reply}`);
+  return `sent: CallMeBot replied "${reply || "(empty)"}" in ${((Date.now() - started) / 1000).toFixed(1)}s`;
 }
 
 /** Sends every message, logging failures instead of throwing on the first one. */
@@ -102,7 +109,8 @@ async function dispatchLogged(bookingId: string, action: string, jobs: Job[]) {
       console.error(`[notify] ${label} failed`, r.reason);
       return `${label} ✗ ${String((r.reason as Error)?.message ?? r.reason).slice(0, 160)}`;
     }
-    return r.value === "skipped" ? `${label} – not set up` : `${label} ✓`;
+    if (r.value === "skipped") return `${label} – not set up`;
+    return r.value === "sent" ? `${label} ✓` : `${label} ✓ (${r.value.slice(6)})`;
   });
   const { prisma } = await import("./prisma");
   await prisma.activityLog.create({ data: { bookingId, action, detail: parts.join(" · ") } }).catch((e) => console.error("[notify] log", e));

@@ -109,7 +109,8 @@ export async function testAlertAction(_prev: ActionState, form: FormData): Promi
     }
     const r = await sendWhatsAppAlert(`✅ Test alert — Braids by Peace Joy\nWhatsApp booking alerts are working (${stamp}).`);
     if (r === "skipped") return { ok: false, error: "WhatsApp isn't set up: WHATSAPP_ALERT_NUMBER or CALLMEBOT_API_KEY is missing from the server .env." };
-    return { ok: true, message: "CallMeBot accepted the message. It usually arrives within a minute (sometimes a few)." };
+    const reply = r === "sent" ? "" : ` ${r.slice(6)}.`;
+    return { ok: true, message: `CallMeBot accepted the message.${reply} It usually arrives within a minute — CallMeBot gives no delivery receipt, so if it never arrives the problem is on their side.` };
   } catch (err) {
     const msg = (err as Error).message;
     const hint = /535|auth/i.test(msg)
