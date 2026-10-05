@@ -115,7 +115,7 @@ export default async function BookingPage({
       </div>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
-        {active && !b.outcome && (
+        {active && (!b.outcome || b.outcome === "NOT_UPDATED") && (
           <RescheduleForm
             id={b.id}
             today={salonDateKey(new Date())}
@@ -126,7 +126,7 @@ export default async function BookingPage({
         {active && balance > 0 && <RecordPaymentForm id={b.id} balance={balance} />}
         {active && <OutcomeButtons id={b.id} started={started} current={b.outcome} />}
         <NotesForm id={b.id} notes={b.ownerNotes ?? ""} />
-        {active && !b.outcome && <CancelForm id={b.id} canRefund={canRefund} />}
+        {active && (!b.outcome || b.outcome === "NOT_UPDATED") && <CancelForm id={b.id} canRefund={canRefund} />}
       </div>
 
       <section id="history" className="mt-6 scroll-mt-32 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-900/5">

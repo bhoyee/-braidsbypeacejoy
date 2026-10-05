@@ -14,6 +14,11 @@ export function StatusBadges({ b }: { b: Pick<Booking, "paymentStatus" | "outcom
       {b.paymentStatus === "REFUNDED" && <span className={`${pill} bg-red-100 text-red-700`}>Auto-refunded</span>}
       {b.outcome === "NO_SHOW" && <span className={`${pill} bg-orange-100 text-orange-700`}>No-show</span>}
       {b.outcome === "COMPLETED" && <span className={`${pill} bg-green-100 text-green-700`}>Completed</span>}
+      {b.outcome === "NOT_UPDATED" && (
+        <span className={`${pill} bg-slate-200 text-slate-700`} title="Never marked and the balance wasn't recorded — set Completed or No-show">
+          Not updated
+        </span>
+      )}
       {(b.paymentStatus === "DEPOSIT_PAID" || b.paymentStatus === "FULLY_SETTLED") &&
         (balance > 0 ? (
           <span className={`${pill} bg-gold-200 text-navy-900`}>Owes {formatUSD(balance)}</span>

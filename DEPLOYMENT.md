@@ -150,6 +150,13 @@ Sent by the every-minute reminders cron (`src/lib/reminders.ts`) to the client (
 - **2 hours before** — "See you soon": address/suite, directions, balance, "running late?". Skipped when booked less than 3 hours ahead.
 - Never for cancelled bookings. Each one is logged in the booking's activity in Manage Bookings.
 
+## Unmarked appointments and the daily summary
+
+- **Paid in full** and not marked Completed/No-show within 24 hours → marked **Completed** automatically (review request follows).
+- **Balance still owing** → stays in **Needs update** (no review email). After 7 days it's labelled **Not updated** — neutral, and the owner can still set Completed, No-show, cancel or reschedule.
+- **Daily summary** at 8 PM salon time to every `ADMIN_EMAIL` + the WhatsApp alert number: today's appointments, what needs updating, balances not yet recorded, tomorrow's count. Skipped on days with nothing to report.
+- Local testing: run with `NOTIFY_DRY_RUN=1` so no email or WhatsApp is ever sent (settings are otherwise read straight from `.env`).
+
 ## Automatic follow-up emails
 
 Sent by the every-minute reminders cron, only between 10 AM and 6 PM salon time:

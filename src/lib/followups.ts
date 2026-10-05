@@ -18,6 +18,7 @@ export const RETENTION_STEPS = (() => {
   const days = (process.env.RETENTION_STEPS ?? "").split(",").map((d) => Number(d.trim())).filter((d) => d > 0);
   return days.length === 3 ? days.sort((a, b) => a - b) : [60, 90, 120];
 })();
+const STALE_DAYS = 7; // unmarked deposit-only appointments → "Not updated"
 const PER_RUN = 5; // gentle on the mail server
 
 /** Only email clients at a civil hour, salon time (10 AM – 6 PM). */
@@ -33,20 +34,39 @@ async function unsubscribed(emails: string[]) {
 }
 
 /**
- * Appointments the owner never marked are treated as Completed 24 hours after they
- * end. The owner can still change it to No-show afterwards in Manage Bookings.
+ * Appointments the owner never marked:
+ * - PAID IN FULL → treated as Completed 24 hours after they end (they almost certainly came);
+ * - balance still owing → left in "Needs update" (the daily summary reminds the owner),
+ *   then labelled "Not updated" after 7 days so lists stay tidy. That label is neutral:
+ *   no review email, and the owner can still change it to Completed or No-show.
  */
 export async function autoCompleteVisits(now = new Date()) {
   const due = await prisma.booking.findMany({
-    where: { paymentStatus: { in: ["DEPOSIT_PAID", "FULLY_SETTLED"] }, outcome: null, endAt: { lte: new Date(now.getTime() - DAY) } },
+    where: { paymentStatus: "FULLY_SETTLED", outcome: null, endAt: { lte: new Date(now.getTime() - DAY) } },
     select: { id: true },
     take: 100,
   });
   let done = 0;
   for (const { id } of due) {
-    const claim = await prisma.booking.updateMany({ where: { id, outcome: null }, data: { outcome: "COMPLETED" } });
+    const claim = await prisma.booking.updateMany({ where: { id, outcome: null, paymentStatus: "FULLY_SETTLED" }, data: { outcome: "COMPLETED" } });
     if (claim.count !== 1) continue; // the owner (or another run) just marked it
-    await prisma.activityLog.create({ data: { bookingId: id, action: "Marked completed automatically", detail: "Not marked within 24 hours — change to No-show if they didn't come" } });
+    await prisma.activityLog.create({
+      data: { bookingId: id, action: "Marked completed automatically", detail: "Paid in full and not marked within 24 hours — change to No-show if they didn't come" },
+    });
+    done++;
+  }
+
+  const stale = await prisma.booking.findMany({
+    where: { paymentStatus: "DEPOSIT_PAID", outcome: null, endAt: { lte: new Date(now.getTime() - STALE_DAYS * DAY) } },
+    select: { id: true },
+    take: 100,
+  });
+  for (const { id } of stale) {
+    const claim = await prisma.booking.updateMany({ where: { id, outcome: null, paymentStatus: "DEPOSIT_PAID" }, data: { outcome: "NOT_UPDATED" } });
+    if (claim.count !== 1) continue;
+    await prisma.activityLog.create({
+      data: { bookingId: id, action: "Marked “Not updated”", detail: `Not marked within ${STALE_DAYS} days and the balance wasn't recorded — set Completed or No-show when you know` },
+    });
     done++;
   }
   return done;

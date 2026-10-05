@@ -69,7 +69,7 @@ const NO_SHOW: ConfirmOptions = {
 const askNoShow = (e: React.FormEvent<HTMLFormElement>) =>
   ((e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null)?.value === "NO_SHOW" ? NO_SHOW : null;
 
-export function OutcomeButtons({ id, started, current }: { id: string; started: boolean; current: "COMPLETED" | "NO_SHOW" | null }) {
+export function OutcomeButtons({ id, started, current }: { id: string; started: boolean; current: "COMPLETED" | "NO_SHOW" | "NOT_UPDATED" | null }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(outcomeAction, null);
   const { guard, dialog } = useConfirm();
   return (

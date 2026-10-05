@@ -25,6 +25,7 @@ enum BookingStatus {
 enum BookingOutcome {
   COMPLETED
   NO_SHOW
+  NOT_UPDATED // past appointment with a balance owing that was never marked (set after 7 days)
 }
 
 enum PaymentKind {

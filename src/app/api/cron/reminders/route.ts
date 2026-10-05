@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { autoCompleteVisits, sendRetentionReminders, sendReviewRequests } from "@/lib/followups";
 import { sendAppointmentReminders } from "@/lib/reminders";
+import { sendDailySummary } from "@/lib/summary";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -37,5 +38,8 @@ export async function GET(req: NextRequest) {
     sendRetentionReminders(now).catch((e) => (console.error("[cron] retention", e), 0)),
   ]);
 
-  return NextResponse.json({ ok: true, remindersSent: sent, holdsReleased: swept.count, autoCompleted, reviewRequests: reviews, retentionEmails: retention });
+  // Owner's evening summary (once a day, 8 PM salon time).
+  const dailySummary = await sendDailySummary(now).catch((e) => (console.error("[cron] daily summary", e), false));
+
+  return NextResponse.json({ ok: true, remindersSent: sent, holdsReleased: swept.count, autoCompleted, reviewRequests: reviews, retentionEmails: retention, dailySummary });
 }

@@ -128,7 +128,7 @@ export async function cancelBooking(id: string, reason: string, refundDeposit: b
   const b = await prisma.booking.findUnique({ where: { id }, include: { service: true, payments: true } });
   if (!b) return { ok: false, error: "Booking not found." };
   if (!ACTIVE.includes(b.paymentStatus as (typeof ACTIVE)[number])) return { ok: false, error: "Only confirmed bookings can be cancelled." };
-  if (b.outcome) return { ok: false, error: "This appointment is already marked as completed or no-show." };
+  if (b.outcome && b.outcome !== "NOT_UPDATED") return { ok: false, error: "This appointment is already marked as completed or no-show." };
 
   let refunded = false;
   if (refundDeposit) {
@@ -231,7 +231,7 @@ export async function rescheduleBooking(id: string, startsAt: string, emailClien
   const before = await prisma.booking.findUnique({ where: { id }, include: { service: true } });
   if (!before) return { ok: false, error: "Booking not found." };
   if (!ACTIVE.includes(before.paymentStatus as (typeof ACTIVE)[number])) return { ok: false, error: "Only confirmed bookings can be rescheduled." };
-  if (before.outcome) return { ok: false, error: "This appointment is already marked as completed or no-show." };
+  if (before.outcome && before.outcome !== "NOT_UPDATED") return { ok: false, error: "This appointment is already marked as completed or no-show." };
   if (start.getTime() === before.appointmentAt.getTime()) return { ok: false, error: "That's the current time — choose a different one." };
 
   const minute = salonMinuteOfDay(start);
@@ -247,7 +247,7 @@ export async function rescheduleBooking(id: string, startsAt: string, emailClien
     return tx.booking.update({
       where: { id },
       // New time → the 24-hour and 2-hour reminders go out again for it.
-      data: { appointmentAt: start, endAt: end, dayBeforeReminderSentAt: null, reminderSentAt: null },
+      data: { appointmentAt: start, endAt: end, outcome: null, dayBeforeReminderSentAt: null, reminderSentAt: null },
       include: { service: true },
     });
   });

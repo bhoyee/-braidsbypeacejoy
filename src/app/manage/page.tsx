@@ -167,7 +167,7 @@ export default async function ManagePage({ searchParams }: { searchParams: SP })
             </h2>
             <div className="space-y-3">
               {g.items.map((b) => {
-                const needsUpdate = (b.paymentStatus === "DEPOSIT_PAID" || b.paymentStatus === "FULLY_SETTLED") && !b.outcome && b.appointmentAt <= now;
+                const needsUpdate = (b.paymentStatus === "DEPOSIT_PAID" || b.paymentStatus === "FULLY_SETTLED") && (!b.outcome || b.outcome === "NOT_UPDATED") && b.appointmentAt <= now;
                 return (
                   <div key={b.id} className="group relative rounded-2xl bg-white p-4 shadow-sm ring-1 ring-navy-900/5 transition hover:shadow-lg hover:ring-royal-700/30 sm:p-5">
                     <div className="flex items-center gap-4">

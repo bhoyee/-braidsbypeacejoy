@@ -35,7 +35,7 @@ function getMailer(): Transporter | null {
 export type Delivery = "sent" | "skipped" | `sent: ${string}`;
 
 export async function sendEmail(to: string, subject: string, html: string, text: string, headers?: Record<string, string>): Promise<Delivery> {
-  const t = getMailer();
+  const t = process.env.NOTIFY_DRY_RUN === "1" ? null : getMailer(); // dry run: never send (local testing)
   if (!t) {
     console.info(`[email:skipped] ${to} — ${subject}`);
     return "skipped";
@@ -59,7 +59,7 @@ export async function sendEmail(to: string, subject: string, html: string, text:
 export async function sendWhatsAppAlert(text: string): Promise<Delivery> {
   const phone = secret("WHATSAPP_ALERT_NUMBER");
   const apikey = secret("CALLMEBOT_API_KEY");
-  if (!phone || !apikey) {
+  if (!phone || !apikey || process.env.NOTIFY_DRY_RUN === "1") {
     console.info(`[whatsapp:skipped] ${text.split("\n")[0]}`);
     return "skipped";
   }
