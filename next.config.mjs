@@ -22,6 +22,17 @@ const nextConfig = {
       fallback: [],
     };
   },
+  async redirects() {
+    // One address for search engines: www → the bare domain (permanent).
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.braidsbypeacejoy.com" }],
+        destination: "https://braidsbypeacejoy.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
