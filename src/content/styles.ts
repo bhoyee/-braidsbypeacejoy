@@ -7,7 +7,6 @@
 // • category   one of the CATEGORIES ids below.
 // • popular    true = shown in "Popular Styles" on the home page (keep it to ~8).
 // • priceCents price in cents ($250.00 = 25000).
-// • hairBundles  set only if the style always uses a fixed number of bundles.
 // • hair       "bring" = hair not provided (client brings it), "none" = no hair/colour
 //              add-ons (e.g. take-out). Leave out for the normal hair options.
 // • note       short line shown on the menu and when booking, e.g. "Please bring your boho hair".
@@ -156,7 +155,6 @@ export const STYLES: StyleEntry[] = [
     priceCents: 40000,
     durationMin: 240,
     imageUrl: "/assets/styles/bora-bora-braids.jpg",
-    hairBundles: 4,
     popular: true,
     note: BRING_BOHO,
     description: "Knotless braids with full, flowing curls throughout.",
@@ -168,7 +166,6 @@ export const STYLES: StyleEntry[] = [
     priceCents: 42000,
     durationMin: 240,
     imageUrl: "/assets/styles/bora-bora-braids-smedium.jpg",
-    hairBundles: 4,
     note: BRING_BOHO,
     description: "Smaller Bora Bora braids with curls throughout for an extra-full finish.",
   },
@@ -179,7 +176,6 @@ export const STYLES: StyleEntry[] = [
     priceCents: 38000,
     durationMin: 240,
     imageUrl: "/assets/styles/mermaid-braids.jpg",
-    hairBundles: 3,
     popular: true,
     note: BRING_BOHO,
     description: "Braids with soft, wavy mermaid curls left out for a romantic finish.",

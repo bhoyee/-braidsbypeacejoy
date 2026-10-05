@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     (input.addOns ?? { hair: "included", colorMix: false }) as Parameters<typeof normalizeAddOns>[0],
     asHairPolicy(service.hair),
   );
-  const quote = quoteAddOns(selection as Parameters<typeof quoteAddOns>[0], service.hairBundles);
+  const quote = quoteAddOns(selection as Parameters<typeof quoteAddOns>[0]);
 
   let hold: Awaited<ReturnType<typeof createDepositHold>>;
   try {

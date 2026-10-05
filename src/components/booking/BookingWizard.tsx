@@ -54,7 +54,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
   const service = services.find((s) => s.id === serviceId) ?? null;
   // The style's hair rule (e.g. "hair not provided") always applies to what's shown and sent.
   const chosenAddOns = useMemo(() => normalizeAddOns(addOns, asHairPolicy(service?.hair)), [addOns, service?.hair]);
-  const quote = useMemo(() => quoteAddOns(chosenAddOns, service?.hairBundles), [chosenAddOns, service?.hairBundles]);
+  const quote = useMemo(() => quoteAddOns(chosenAddOns), [chosenAddOns]);
   const totalCents = (service?.priceCents ?? 0) + quote.totalCents;
 
   // Returning from a cancelled Stripe Checkout → release the held slot immediately.

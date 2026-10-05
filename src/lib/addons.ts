@@ -14,7 +14,7 @@ export type HairOptionId = (typeof HAIR_OPTIONS)[number]["id"];
 
 export const COLOR_MIX_CENTS = 2000; // mix of two or more colors
 export const MAX_BUNDLES = 8;
-export const DEFAULT_BUNDLES = 2;
+export const DEFAULT_BUNDLES = 1; // the client adds more with +
 
 export type AddOnSelection = {
   hair: HairOptionId;
@@ -34,10 +34,10 @@ export type AddOnQuote = {
   summary: string;
 };
 
-/** Price the add-ons for a style. `styleBundles` = the style's fixed bundle count, if it has one. */
-export function quoteAddOns(sel: AddOnSelection, styleBundles: number | null | undefined): AddOnQuote {
+/** Price the add-ons. The client always chooses the number of bundles (1–MAX_BUNDLES). */
+export function quoteAddOns(sel: AddOnSelection): AddOnQuote {
   const option = HAIR_OPTIONS.find((o) => o.id === sel.hair) ?? HAIR_OPTIONS[0];
-  const bundles = styleBundles ?? clampBundles(sel.bundles ?? DEFAULT_BUNDLES);
+  const bundles = clampBundles(sel.bundles ?? DEFAULT_BUNDLES);
   const lines: AddOnLine[] = [];
   const summary: string[] = [];
 

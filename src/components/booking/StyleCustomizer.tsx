@@ -17,7 +17,6 @@ type Props = {
 export function StyleCustomizer({ service, value, quote, onChange, onContinue }: Props) {
   const selectedHair = HAIR_OPTIONS.find((o) => o.id === value.hair) ?? HAIR_OPTIONS[0];
   const paidHair = selectedHair.perBundleCents > 0;
-  const fixedBundles = service.hairBundles;
   const total = service.priceCents + quote.totalCents;
   const policy = asHairPolicy(service.hair);
   const hairOptions = hairOptionsFor(policy);
@@ -80,41 +79,31 @@ export function StyleCustomizer({ service, value, quote, onChange, onContinue }:
 
             {paidHair && (
               <div className="mt-4 rounded-2xl bg-cream p-4">
-                {fixedBundles ? (
-                  <p className="text-sm text-navy-900/80">
-                    {service.name} uses <strong>{fixedBundles} bundles</strong> of hair —{" "}
-                    <strong>
-                      {fixedBundles} × {formatUSD(selectedHair.perBundleCents)} = {formatUSD(fixedBundles * selectedHair.perBundleCents)}
-                    </strong>
-                    .
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-semibold text-navy-900">How many bundles?</p>
-                      <p className="text-xs text-navy-900/60">Not sure? Pick your best guess — we&apos;ll confirm at your appointment.</p>
-                    </div>
-                    <div className="flex items-center gap-2" role="group" aria-label="Number of bundles">
-                      <StepButton
-                        label="Fewer bundles"
-                        disabled={quote.bundles <= 1}
-                        onClick={() => onChange({ ...value, bundles: clampBundles(quote.bundles - 1) })}
-                      >
-                        −
-                      </StepButton>
-                      <span className="w-10 text-center text-lg font-bold text-navy-900" aria-live="polite">
-                        {quote.bundles}
-                      </span>
-                      <StepButton
-                        label="More bundles"
-                        disabled={quote.bundles >= MAX_BUNDLES}
-                        onClick={() => onChange({ ...value, bundles: clampBundles(quote.bundles + 1) })}
-                      >
-                        +
-                      </StepButton>
-                    </div>
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-navy-900">How many bundles?</p>
+                    <p className="text-xs text-navy-900/60">Starts at 1 — tap + to add more. Not sure? We&apos;ll confirm at your appointment.</p>
                   </div>
-                )}
+                  <div className="flex items-center gap-2" role="group" aria-label="Number of bundles">
+                    <StepButton
+                      label="Fewer bundles"
+                      disabled={quote.bundles <= 1}
+                      onClick={() => onChange({ ...value, bundles: clampBundles(quote.bundles - 1) })}
+                    >
+                      −
+                    </StepButton>
+                    <span className="w-10 text-center text-lg font-bold text-navy-900" aria-live="polite">
+                      {quote.bundles}
+                    </span>
+                    <StepButton
+                      label="More bundles"
+                      disabled={quote.bundles >= MAX_BUNDLES}
+                      onClick={() => onChange({ ...value, bundles: clampBundles(quote.bundles + 1) })}
+                    >
+                      +
+                    </StepButton>
+                  </div>
+                </div>
               </div>
             )}
           </fieldset>
