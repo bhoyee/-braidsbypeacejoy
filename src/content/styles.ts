@@ -96,7 +96,7 @@ export const STYLES: StyleEntry[] = [
     category: "knotless",
     priceCents: 30000,
     durationMin: 240,
-    imageUrl: "/assets/styles/small-knotless.jpg",
+    imageUrl: "/assets/styles/small-knotless-2.jpg",
     popular: true,
     description: "Featherlight, ultra-neat knotless parts for a long-lasting, refined finish.",
   },
