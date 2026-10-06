@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0b1a4a" flood-opacity="0.12"/></filter>
+    <style>
+      .t{font-size:14px;font-weight:700;fill:#0b1a4a}
+      .s{font-size:12px;fill:#475569}
+      .when{font-size:12px;font-weight:700;fill:#1e3a8a;letter-spacing:.5px}
+      .who{font-size:10.5px;font-weight:700;letter-spacing:1px}
+      .head{font-size:12px;font-weight:700;letter-spacing:2px;fill:#1e3a8a}
+    </style>
+  </defs>
+  <rect width="1200" height="560" fill="#fffaf0"/>
+  <text x="40" y="44" font-size="22" font-weight="700" fill="#0b1a4a">Client journey — automatic messages</text>
+  <text x="40" y="68" font-size="13" fill="#475569">Sent by the every-minute cron. Follow-ups only between 10 AM – 6 PM salon time (America/New_York); every follow-up email has an unsubscribe link.</text>
+
+  <!-- Timeline line -->
+  <line x1="70" y1="150" x2="1130" y2="150" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <g>
+    <circle cx="100" cy="150" r="11" fill="#ffc72c" stroke="#0b1a4a" stroke-width="3"/>
+    <circle cx="265" cy="150" r="9" fill="#ffffff" stroke="#1e3a8a" stroke-width="3"/>
+    <circle cx="420" cy="150" r="9" fill="#ffffff" stroke="#1e3a8a" stroke-width="3"/>
+    <circle cx="575" cy="150" r="11" fill="#0b1a4a" stroke="#ffc72c" stroke-width="3"/>
+    <circle cx="745" cy="150" r="9" fill="#ffffff" stroke="#1e3a8a" stroke-width="3"/>
+    <circle cx="930" cy="150" r="9" fill="#ffffff" stroke="#1e3a8a" stroke-width="3"/>
+    <circle cx="1100" cy="150" r="9" fill="#ffffff" stroke="#1e3a8a" stroke-width="3"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="100" y="122" class="when">DEPOSIT PAID</text>
+    <text x="265" y="122" class="when">24 H BEFORE</text>
+    <text x="420" y="122" class="when">2 H BEFORE</text>
+    <text x="575" y="122" class="when">APPOINTMENT</text>
+    <text x="745" y="122" class="when">AFTER THE VISIT</text>
+    <text x="930" y="122" class="when">2 · 3 MONTHS</text>
+    <text x="1100" y="122" class="when">4 MONTHS</text>
+  </g>
+
+  <!-- Cards -->
+  <g filter="url(#shadow)">
+    <rect x="30" y="180" width="150" height="190" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="190" y="180" width="150" height="190" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="350" y="180" width="150" height="190" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="510" y="180" width="130" height="190" rx="14" fill="#0b1a4a"/>
+    <rect x="650" y="180" width="190" height="190" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="850" y="180" width="160" height="190" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="1020" y="180" width="150" height="190" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+  </g>
+
+  <g>
+    <text x="44" y="206" class="who" fill="#1e3a8a">CLIENT · OWNER</text>
+    <text x="44" y="230" class="t">“You're booked!”</text>
+    <text x="44" y="251" class="s">Code, style, total,</text>
+    <text x="44" y="268" class="s">balance, pay link,</text>
+    <text x="44" y="285" class="s">calendar, directions</text>
+    <text x="44" y="310" class="s">Owner: email +</text>
+    <text x="44" y="327" class="s">WhatsApp, new or</text>
+    <text x="44" y="344" class="s">returning client</text>
+
+    <text x="204" y="206" class="who" fill="#1e3a8a">CLIENT · OWNER</text>
+    <text x="204" y="230" class="t">“See you tomorrow”</text>
+    <text x="204" y="251" class="s">Details, balance +</text>
+    <text x="204" y="268" class="s">pay link, prep</text>
+    <text x="204" y="285" class="s">checklist</text>
+    <text x="204" y="310" class="s">Skipped if booked</text>
+    <text x="204" y="327" class="s">&lt; 36 h ahead</text>
+
+    <text x="364" y="206" class="who" fill="#1e3a8a">CLIENT · OWNER</text>
+    <text x="364" y="230" class="t">“See you soon”</text>
+    <text x="364" y="251" class="s">Suite 101 address,</text>
+    <text x="364" y="268" class="s">directions,</text>
+    <text x="364" y="285" class="s">“running late?”</text>
+    <text x="364" y="310" class="s">Skipped if booked</text>
+    <text x="364" y="327" class="s">&lt; 3 h ahead</text>
+
+    <text x="524" y="206" class="who" style="fill:#ffc72c">IN THE SALON</text>
+    <text x="524" y="230" class="t" style="fill:#ffffff">Owner marks</text>
+    <text x="524" y="251" class="s" style="fill:#c7d2fe">Completed or</text>
+    <text x="524" y="268" class="s" style="fill:#c7d2fe">No-show, records</text>
+    <text x="524" y="285" class="s" style="fill:#c7d2fe">cash / Cash App /</text>
+    <text x="524" y="302" class="s" style="fill:#c7d2fe">Zelle payments</text>
+
+    <text x="664" y="206" class="who" fill="#1e3a8a">CLIENT</text>
+    <text x="664" y="230" class="t">Review request</text>
+    <text x="664" y="251" class="s">Google review button</text>
+    <text x="664" y="268" class="s">+ tag on Instagram /</text>
+    <text x="664" y="285" class="s">TikTok</text>
+    <text x="664" y="310" class="s">Only for Completed</text>
+    <text x="664" y="327" class="s">visits · max 1 per</text>
+    <text x="664" y="344" class="s">30 days</text>
+
+    <text x="864" y="206" class="who" fill="#1e3a8a">CLIENT</text>
+    <text x="864" y="230" class="t">Come-back 1 · 2</text>
+    <text x="864" y="251" class="s">“Ready for your next</text>
+    <text x="864" y="268" class="s">look?” · “Time for a</text>
+    <text x="864" y="285" class="s">refresh?” — book the</text>
+    <text x="864" y="302" class="s">same style in a tap</text>
+    <text x="864" y="327" class="s">Stops when they rebook</text>
+    <text x="864" y="344" class="s">(email or phone)</text>
+
+    <text x="1034" y="206" class="who" fill="#1e3a8a">CLIENT</text>
+    <text x="1034" y="230" class="t">Come-back 3</text>
+    <text x="1034" y="251" class="s">“We miss you” —</text>
+    <text x="1034" y="268" class="s">the last reminder</text>
+    <text x="1034" y="293" class="s">RETENTION_STEPS</text>
+    <text x="1034" y="310" class="s">= "60,90,120" days</text>
+  </g>
+
+  <!-- Owner automation strip -->
+  <g filter="url(#shadow)"><rect x="30" y="400" width="1140" height="130" rx="16" fill="#ffffff" stroke="#e2e8f0"/></g>
+  <text x="54" y="430" class="head">OWNER AUTOMATION</text>
+  <g font-size="13" fill="#0b1a4a">
+    <circle cx="62" cy="460" r="5" fill="#16a34a"/>
+    <text x="76" y="465"><tspan font-weight="700">Paid in full + not marked in 24 h</tspan> → Completed automatically (review request follows)</text>
+    <circle cx="62" cy="487" r="5" fill="#f59e0b"/>
+    <text x="76" y="492"><tspan font-weight="700">Balance owing</tspan> → stays in “Needs update” · after 7 days labelled “Not updated” (neutral, editable)</text>
+    <circle cx="62" cy="514" r="5" fill="#1e3a8a"/>
+    <text x="76" y="519"><tspan font-weight="700">8 PM daily summary</tspan> → today's appointments, what needs updating, balances not yet recorded, tomorrow's count</text>
+  </g>
+</svg>
