@@ -328,10 +328,17 @@ export async function removeTimeOff(id: string) {
   await prisma.timeBlock.deleteMany({ where: { id } });
 }
 
-/** Upcoming time off (not yet over), soonest first, each with any bookings inside it. */
-export async function listTimeOff(now = new Date()) {
-  const blocks = await prisma.timeBlock.findMany({ where: { endAt: { gt: now } }, orderBy: { startAt: "asc" }, take: 100 });
-  return Promise.all(blocks.map(async (b) => ({ ...b, label: describeTimeOff(b.startAt, b.endAt), clashes: await bookingsDuring(b.startAt, b.endAt) })));
+export const TIME_OFF_PAGE = 10;
+
+/** Upcoming time off (not yet over), soonest first, one page at a time, each with any bookings inside it. */
+export async function listTimeOff(page = 1, now = new Date()) {
+  const where = { endAt: { gt: now } };
+  const total = await prisma.timeBlock.count({ where });
+  const pageCount = Math.max(1, Math.ceil(total / TIME_OFF_PAGE));
+  const current = Math.min(Math.max(1, page), pageCount);
+  const blocks = await prisma.timeBlock.findMany({ where, orderBy: { startAt: "asc" }, skip: (current - 1) * TIME_OFF_PAGE, take: TIME_OFF_PAGE });
+  const items = await Promise.all(blocks.map(async (b) => ({ ...b, label: describeTimeOff(b.startAt, b.endAt), clashes: await bookingsDuring(b.startAt, b.endAt) })));
+  return { items, total, page: current, pageCount };
 }
 
 /** "Thu, Oct 15 · 1:00 PM – 4:00 PM" or "Mon, Dec 24 – Thu, Jan 2 · all day" (salon time). */

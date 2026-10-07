@@ -9,9 +9,11 @@ import { removeTimeOffAction } from "../actions";
 export const dynamic = "force-dynamic";
 
 /** Owner time off: block whole days, several days or part of a day so clients can't book them. */
-export default async function TimeOffPage() {
+export default async function TimeOffPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   if (!(await isAdmin())) redirect("/manage");
-  const blocks = await listTimeOff();
+  const { page } = await searchParams;
+  const list = await listTimeOff(Number(page) || 1);
+  const blocks = list.items;
 
   return (
     <div className="mx-auto max-w-4xl px-4 pt-8">
@@ -31,9 +33,11 @@ export default async function TimeOffPage() {
         <TimeOffForm today={salonDateKey(new Date())} />
       </div>
 
-      <section className="mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-900/5">
-        <h2 className="font-display text-xl text-navy-900">Upcoming time off</h2>
-        {blocks.length === 0 ? (
+      <section id="upcoming" className="mt-6 scroll-mt-32 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-900/5">
+        <h2 className="font-display text-xl text-navy-900">
+          Upcoming time off {list.total > 0 && <span className="text-sm font-normal text-navy-900/50">· {list.total}</span>}
+        </h2>
+        {list.total === 0 ? (
           <p className="mt-2 text-sm text-navy-900/60">Nothing blocked — you&apos;re open every day, 8 AM – 7 PM.</p>
         ) : (
           <ul className="mt-3 divide-y divide-navy-900/5">
@@ -64,6 +68,27 @@ export default async function TimeOffPage() {
               </li>
             ))}
           </ul>
+        )}
+        {list.pageCount > 1 && (
+          <nav aria-label="Pages" className="mt-4 flex items-center justify-between gap-3 border-t border-navy-900/5 pt-4 text-sm">
+            {list.page > 1 ? (
+              <Link href={`/manage/time-off?page=${list.page - 1}#upcoming`} scroll={false} className="rounded-full px-4 py-2 text-xs font-semibold text-royal-700 ring-1 ring-navy-900/10 hover:bg-gold-200/60">
+                ← Sooner
+              </Link>
+            ) : (
+              <span className="rounded-full px-4 py-2 text-xs font-semibold text-navy-900/30 ring-1 ring-navy-900/10">← Sooner</span>
+            )}
+            <span className="text-xs text-navy-900/60">
+              Page {list.page} of {list.pageCount}
+            </span>
+            {list.page < list.pageCount ? (
+              <Link href={`/manage/time-off?page=${list.page + 1}#upcoming`} scroll={false} className="rounded-full px-4 py-2 text-xs font-semibold text-royal-700 ring-1 ring-navy-900/10 hover:bg-gold-200/60">
+                Later →
+              </Link>
+            ) : (
+              <span className="rounded-full px-4 py-2 text-xs font-semibold text-navy-900/30 ring-1 ring-navy-900/10">Later →</span>
+            )}
+          </nav>
         )}
       </section>
     </div>

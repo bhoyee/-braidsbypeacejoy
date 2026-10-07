@@ -36,13 +36,19 @@ export function TimeSlots({ slots, loading, error, value, onChange }: Props) {
   if (!slots) return <p className="rounded-xl bg-cream p-6 text-center text-sm text-navy-900/60">Select a date to see open times.</p>;
 
   const openCount = slots.filter((s) => s.status === "available").length;
-  const closedAllDay = slots.every((s) => s.status === "unavailable" || s.status === "past");
+  // Why nothing is open: the owner's time off, or simply too late in the day.
+  const closedAllDay = slots.some((s) => s.status === "unavailable") && slots.every((s) => s.status === "unavailable" || s.status === "past");
+  const allPassed = slots.every((s) => s.status === "past" || s.status === "after-hours");
 
   return (
     <div className="space-y-5">
       {openCount === 0 && (
         <p className="rounded-xl bg-gold-200/50 p-4 text-sm font-medium text-navy-900">
-          {closedAllDay ? "We're not taking bookings on this day. Please choose another date." : "This day is fully booked for the selected style. Please choose another date."}
+          {closedAllDay
+            ? "We're not taking bookings on this day. Please choose another date."
+            : allPassed
+              ? "No more times are available today. Please choose another date."
+              : "This day is fully booked for the selected style. Please choose another date."}
         </p>
       )}
       {GROUPS.map((g) => {

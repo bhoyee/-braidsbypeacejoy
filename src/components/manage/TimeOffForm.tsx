@@ -72,7 +72,7 @@ export function TimeOffForm({ today }: { today: string }) {
             aria-selected={kind === k.id}
             onClick={() => setKind(k.id)}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-              kind === k.id ? "bg-royal-700 text-white" : "bg-cream text-navy-900 ring-1 ring-navy-900/10 hover:bg-gold-200/60"
+              kind === k.id ? "bg-purple-700 text-white" : "bg-cream text-navy-900 ring-1 ring-navy-900/10 hover:bg-gold-200/60"
             }`}
           >
             {k.label}
@@ -128,7 +128,7 @@ export function TimeOffForm({ today }: { today: string }) {
           <span className="mb-1 block text-sm font-semibold text-navy-900">Private note (optional)</span>
           <input name="note" maxLength={120} placeholder="e.g. Vacation · Doctor's appointment" className={input} />
         </label>
-        <button disabled={pending} className="rounded-full bg-royal-700 px-6 py-3 font-semibold text-white hover:bg-navy-900 disabled:opacity-60 sm:col-span-2 sm:justify-self-start">
+        <button disabled={pending} className="rounded-full bg-purple-700 px-6 py-3 font-semibold text-white hover:bg-purple-800 disabled:opacity-60 sm:col-span-2 sm:justify-self-start">
           {pending ? "Saving…" : "Block this time"}
         </button>
       </form>
