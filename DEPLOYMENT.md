@@ -150,6 +150,10 @@ Sent by the every-minute reminders cron (`src/lib/reminders.ts`) to the client (
 - **2 hours before** — "See you soon": address/suite, directions, balance, "running late?". Skipped when booked less than 3 hours ahead.
 - Never for cancelled bookings. Each one is logged in the booking's activity in Manage Bookings.
 
+## Time off (blocking days or hours)
+
+Manage Bookings → **🗓 Time off**: block a **whole day**, **several days** or **part of a day** (30-minute steps, Maryland time), with an optional private note, or tap **Block the rest of today**. Clients can't book inside blocked time (re-checked at checkout); fully blocked days are greyed out in the booking calendar. Existing bookings are never changed — the page lists any that fall inside a block so the owner can reschedule or cancel them. Remove a block to reopen the time.
+
 ## Unmarked appointments and the daily summary
 
 - **Paid in full** and not marked Completed/No-show within 24 hours → marked **Completed** automatically (review request follows).

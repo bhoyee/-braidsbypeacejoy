@@ -10,7 +10,17 @@ import {
   signOutEverywhere,
   startSession,
 } from "@/lib/admin-auth";
-import { cancelBooking, recordPayment, rescheduleBooking, rescheduleSlots, saveNotes, setOutcome } from "@/lib/manage";
+import {
+  addTimeOff,
+  cancelBooking,
+  recordPayment,
+  removeTimeOff,
+  rescheduleBooking,
+  rescheduleSlots,
+  saveNotes,
+  setOutcome,
+  type TimeOffInput,
+} from "@/lib/manage";
 import { sendEmail, sendWhatsAppAlert } from "@/lib/notifications";
 import { adminEmails } from "@/lib/secrets";
 
@@ -118,4 +128,38 @@ export async function testAlertAction(_prev: ActionState, form: FormData): Promi
       : "";
     return { ok: false, error: `Failed: ${msg}${hint}` };
   }
+}
+
+export type TimeOffState =
+  | null
+  | { ok: false; error: string }
+  | { ok: true; message: string; clashes: { id: string; clientName: string; appointmentAt: Date; service: { name: string } }[] };
+
+const minutes = (hhmm: string) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
+};
+
+/** Add time off: a whole day, several days, part of a day, or the rest of today. */
+export async function addTimeOffAction(_prev: TimeOffState, form: FormData): Promise<TimeOffState> {
+  await requireAdmin();
+  const kind = String(form.get("kind"));
+  const input: TimeOffInput =
+    kind === "range"
+      ? { kind, from: String(form.get("from") ?? ""), to: String(form.get("to") ?? "") }
+      : kind === "part"
+        ? { kind, date: String(form.get("date") ?? ""), fromMin: minutes(String(form.get("fromTime") ?? "")), toMin: minutes(String(form.get("toTime") ?? "")) }
+        : kind === "rest-of-today"
+          ? { kind }
+          : { kind: "day", date: String(form.get("date") ?? "") };
+  const r = await addTimeOff(input, String(form.get("note") ?? ""));
+  if (!r.ok) return { ok: false, error: r.error };
+  revalidatePath("/manage/time-off");
+  return { ok: true, message: `Blocked: ${r.label}. Clients can no longer book this time.`, clashes: r.clashes };
+}
+
+export async function removeTimeOffAction(form: FormData) {
+  await requireAdmin();
+  await removeTimeOff(String(form.get("id")));
+  revalidatePath("/manage/time-off");
 }

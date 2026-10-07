@@ -115,6 +115,7 @@ Implementation: `src/lib/reminders.ts`, `src/lib/followups.ts`, `src/lib/summary
 - **Sign-in:** enter an address listed in `ADMIN_EMAIL` → one-time link (15 min, single use, rate-limited) → signed 30-day session cookie. *Sign out everywhere* revokes all devices.
 - **Lists:** Today · Upcoming · Needs update · Past · Cancelled, grouped by day, with search (name, phone, email, code), a day picker and pagination.
 - **Each booking:** contact buttons (call / WhatsApp / text / email), payments & balance, **record payment**, **reschedule** (only free times, client emailed, reminders re-armed), **cancel** with optional Stripe refund, Completed / No-show, private notes, paginated client history and activity log.
+- **Time off:** block a whole day, several days or part of a day (or the rest of today); clients can't book it, blocked days are greyed out, and bookings already inside the time are flagged — never cancelled automatically.
 - **Alerts check:** shows the email / WhatsApp / Stripe settings in use, sends test messages and lists recent delivery results.
 
 ---

@@ -10,7 +10,7 @@ import {
 import { prisma } from "./prisma";
 import { addDaysToKey, minuteLabel, salonDateKey, salonMinuteOfDay, salonTimeToUtc } from "./time";
 
-export type SlotStatus = "available" | "booked" | "after-hours" | "past";
+export type SlotStatus = "available" | "booked" | "unavailable" | "after-hours" | "past";
 
 export type Slot = {
   time: string; // "08:30"
@@ -49,6 +49,35 @@ export async function findConflict(db: Db, start: Date, end: Date, excludeBookin
   });
 }
 
+/** Owner time off overlapping [start, end) — clients can't book inside it. */
+export async function findTimeOff(db: Db, start: Date, end: Date) {
+  return db.timeBlock.findFirst({ where: { startAt: { lt: end }, endAt: { gt: start } }, select: { id: true } });
+}
+
+/**
+ * Salon dates in [fromKey, toKey] that are completely closed by time off
+ * (every minute from opening to closing is blocked) — greyed out in the booking calendar.
+ */
+export async function closedDays(fromKey: string, toKey: string): Promise<string[]> {
+  const blocks = await prisma.timeBlock.findMany({
+    where: { startAt: { lt: salonTimeToUtc(addDaysToKey(toKey, 1), 0) }, endAt: { gt: salonTimeToUtc(fromKey, 0) } },
+    select: { startAt: true, endAt: true },
+    orderBy: { startAt: "asc" },
+  });
+  if (!blocks.length) return [];
+  const closed: string[] = [];
+  for (let day = fromKey; day <= toKey; day = addDaysToKey(day, 1)) {
+    let covered = salonTimeToUtc(day, OPEN_MINUTE).getTime();
+    const close = salonTimeToUtc(day, CLOSE_MINUTE).getTime();
+    for (const b of blocks) {
+      if (b.startAt.getTime() <= covered && b.endAt.getTime() > covered) covered = b.endAt.getTime();
+      if (covered >= close) break;
+    }
+    if (covered >= close) closed.push(day);
+  }
+  return closed;
+}
+
 export function bookingWindow(now = new Date()) {
   const today = salonDateKey(now);
   return { firstDay: today, lastDay: addDaysToKey(today, MAX_DAYS_AHEAD) };
@@ -82,6 +111,10 @@ export async function getDaySlots(
   const dayStart = salonTimeToUtc(dateKey, OPEN_MINUTE);
   const dayEnd = salonTimeToUtc(dateKey, CLOSE_MINUTE);
 
+  const blocks = await prisma.timeBlock.findMany({
+    where: { startAt: { lt: dayEnd }, endAt: { gt: dayStart } },
+    select: { startAt: true, endAt: true },
+  });
   const busy = await prisma.booking.findMany({
     where: {
       AND: [
@@ -101,6 +134,7 @@ export async function getDaySlots(
     let status: SlotStatus = "available";
     if (start.getTime() < now.getTime() + lead * 60_000) status = "past";
     else if (m + durationMin > CLOSE_MINUTE) status = "after-hours";
+    else if (blocks.some((b) => b.startAt < end && b.endAt > start)) status = "unavailable";
     else if (busy.some((b) => b.appointmentAt < end && b.endAt > start)) status = "booked";
 
     slots.push({

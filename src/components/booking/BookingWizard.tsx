@@ -44,6 +44,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [addOns, setAddOns] = useState<AddOnSelection>(NO_ADDONS);
+  const [closedDays, setClosedDays] = useState<string[]>([]);
   const topRef = useRef<HTMLOListElement>(null);
 
   const { minKey, maxKey } = useMemo(() => {
@@ -56,6 +57,14 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
   const chosenAddOns = useMemo(() => normalizeAddOns(addOns, asHairPolicy(service?.hair)), [addOns, service?.hair]);
   const quote = useMemo(() => quoteAddOns(chosenAddOns), [chosenAddOns]);
   const totalCents = (service?.priceCents ?? 0) + quote.totalCents;
+
+  // Days the salon is closed (owner time off) are greyed out in the calendar.
+  useEffect(() => {
+    fetch("/api/availability/closed")
+      .then((r) => (r.ok ? r.json() : { days: [] }))
+      .then((d: { days?: string[] }) => setClosedDays(d.days ?? []))
+      .catch(() => {});
+  }, []);
 
   // Returning from a cancelled Stripe Checkout → release the held slot immediately.
   useEffect(() => {
@@ -256,6 +265,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
               value={dateKey}
               minKey={minKey}
               maxKey={maxKey}
+              closed={closedDays}
               onChange={(k) => {
                 setDateKey(k);
                 setStartsAt(null);

@@ -9,6 +9,7 @@ type Props = {
   value: string | null; // "YYYY-MM-DD"
   minKey: string;
   maxKey: string;
+  closed?: string[]; // fully closed dates (owner time off)
   onChange: (dateKey: string) => void;
 };
 
@@ -16,7 +17,7 @@ const key = (y: number, m: number, d: number) =>
   `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
 /** Month-view date picker. Days outside [minKey, maxKey] are greyed out and unclickable. */
-export function Calendar({ value, minKey, maxKey, onChange }: Props) {
+export function Calendar({ value, minKey, maxKey, closed = [], onChange }: Props) {
   const start = value ?? minKey;
   const [cursor, setCursor] = useState(() => ({ y: Number(start.slice(0, 4)), m: Number(start.slice(5, 7)) - 1 }));
 
@@ -71,7 +72,8 @@ export function Calendar({ value, minKey, maxKey, onChange }: Props) {
       <div className="mt-1 grid grid-cols-7 gap-1">
         {cells.map((k, i) => {
           if (!k) return <span key={`blank-${i}`} />;
-          const disabled = k < minKey || k > maxKey;
+          const isClosed = closed.includes(k);
+          const disabled = k < minKey || k > maxKey || isClosed;
           const selected = k === value;
           const isToday = k === minKey;
           return (
@@ -81,7 +83,8 @@ export function Calendar({ value, minKey, maxKey, onChange }: Props) {
               disabled={disabled}
               onClick={() => onChange(k)}
               aria-pressed={selected}
-              aria-label={k}
+              aria-label={isClosed ? `${k} — closed` : k}
+              title={isClosed ? "Closed — not taking bookings" : undefined}
               className={`relative aspect-square rounded-xl text-sm font-medium transition ${
                 selected
                   ? "bg-gold-400 font-bold text-navy-950 shadow-md shadow-gold-500/40"

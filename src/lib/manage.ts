@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { CLOSE_MINUTE, OPEN_MINUTE, SLOT_STEP_MIN } from "./config";
-import { findConflict, getDaySlots } from "./availability";
+import { findConflict, findTimeOff, getDaySlots } from "./availability";
 import { withSchedulerLock } from "./booking";
 import { formatSalonDate, formatSalonTime, salonDateKey, salonMinuteOfDay, salonTimeToUtc, formatUSD } from "./time";
 import { notifyBookingCancelled, notifyBookingRescheduled, notifyManualPayment } from "./notifications";
@@ -243,7 +243,7 @@ export async function rescheduleBooking(id: string, startsAt: string, emailClien
 
   const end = new Date(start.getTime() + duration * 60_000);
   const updated = await withSchedulerLock(async (tx) => {
-    if (await findConflict(tx, start, end, id)) return null;
+    if ((await findConflict(tx, start, end, id)) || (await findTimeOff(tx, start, end))) return null;
     return tx.booking.update({
       where: { id },
       // New time → the 24-hour and 2-hour reminders go out again for it.
@@ -251,11 +251,98 @@ export async function rescheduleBooking(id: string, startsAt: string, emailClien
       include: { service: true },
     });
   });
-  if (!updated) return { ok: false, error: "That time overlaps another booking — choose another time." };
+  if (!updated) return { ok: false, error: "That time overlaps another booking or your time off — choose another time." };
 
   const from = `${formatSalonDate(before.appointmentAt)} at ${formatSalonTime(before.appointmentAt)}`;
   const to = `${formatSalonDate(start)} at ${formatSalonTime(start)}`;
   await log(id, "Rescheduled", `${from} → ${to}${emailClient ? " · client emailed" : " · client not emailed"}`);
   if (emailClient) await notifyBookingRescheduled(updated, before.appointmentAt).catch((e) => console.error("[notify]", e));
   return { ok: true, message: `Moved to ${to}.${emailClient ? " The client has been emailed." : ""}` };
+}
+
+/* ------------------------------------------------------------------ */
+/* Time off                                                            */
+/* ------------------------------------------------------------------ */
+
+export type TimeOffInput =
+  | { kind: "day"; date: string }
+  | { kind: "range"; from: string; to: string }
+  | { kind: "part"; date: string; fromMin: number; toMin: number }
+  | { kind: "rest-of-today" };
+
+const dateOk = (k: string) => /^\d{4}-\d{2}-\d{2}$/.test(k) && !Number.isNaN(Date.parse(k));
+
+/** Turn the owner's choice into a UTC [start, end) range, or an error. */
+function timeOffRange(input: TimeOffInput, now = new Date()): { start: Date; end: Date } | { error: string } {
+  const today = salonDateKey(now);
+  switch (input.kind) {
+    case "day":
+      if (!dateOk(input.date)) return { error: "Choose a date." };
+      if (input.date < today) return { error: "That date has passed." };
+      return { start: salonTimeToUtc(input.date, 0), end: salonTimeToUtc(input.date, 24 * 60) };
+    case "range": {
+      if (!dateOk(input.from) || !dateOk(input.to)) return { error: "Choose both dates." };
+      if (input.to < input.from) return { error: "The end date is before the start date." };
+      if (input.to < today) return { error: "Those dates have passed." };
+      const days = (Date.parse(input.to) - Date.parse(input.from)) / 86_400_000;
+      if (days > 366) return { error: "Choose a range of up to a year." };
+      return { start: salonTimeToUtc(input.from, 0), end: salonTimeToUtc(input.to, 24 * 60) };
+    }
+    case "part": {
+      if (!dateOk(input.date)) return { error: "Choose a date." };
+      const { fromMin, toMin } = input;
+      if (!(fromMin >= OPEN_MINUTE && toMin <= CLOSE_MINUTE && toMin > fromMin && fromMin % SLOT_STEP_MIN === 0 && toMin % SLOT_STEP_MIN === 0))
+        return { error: "Choose a start and end time between 8:00 AM and 7:00 PM." };
+      const end = salonTimeToUtc(input.date, toMin);
+      if (end <= now) return { error: "That time has passed." };
+      return { start: salonTimeToUtc(input.date, fromMin), end };
+    }
+    case "rest-of-today": {
+      const step = SLOT_STEP_MIN * 60_000;
+      const start = new Date(Math.floor(now.getTime() / step) * step);
+      const end = salonTimeToUtc(today, CLOSE_MINUTE);
+      if (end <= start) return { error: "The salon is already closed for today." };
+      return { start, end };
+    }
+  }
+}
+
+/** Confirmed bookings that fall inside a time range (shown as a warning; never cancelled automatically). */
+export async function bookingsDuring(start: Date, end: Date) {
+  return prisma.booking.findMany({
+    where: { paymentStatus: { in: [...ACTIVE] }, appointmentAt: { lt: end }, endAt: { gt: start } },
+    select: { id: true, clientName: true, appointmentAt: true, service: { select: { name: true } } },
+    orderBy: { appointmentAt: "asc" },
+  });
+}
+
+export async function addTimeOff(input: TimeOffInput, note: string) {
+  const r = timeOffRange(input);
+  if ("error" in r) return { ok: false as const, error: r.error };
+  await prisma.timeBlock.create({ data: { startAt: r.start, endAt: r.end, note: note.trim().slice(0, 120) || null } });
+  const clashes = await bookingsDuring(r.start, r.end);
+  return { ok: true as const, clashes, label: describeTimeOff(r.start, r.end) };
+}
+
+export async function removeTimeOff(id: string) {
+  await prisma.timeBlock.deleteMany({ where: { id } });
+}
+
+/** Upcoming time off (not yet over), soonest first, each with any bookings inside it. */
+export async function listTimeOff(now = new Date()) {
+  const blocks = await prisma.timeBlock.findMany({ where: { endAt: { gt: now } }, orderBy: { startAt: "asc" }, take: 100 });
+  return Promise.all(blocks.map(async (b) => ({ ...b, label: describeTimeOff(b.startAt, b.endAt), clashes: await bookingsDuring(b.startAt, b.endAt) })));
+}
+
+/** "Thu, Oct 15 · 1:00 PM – 4:00 PM" or "Mon, Dec 24 – Thu, Jan 2 · all day" (salon time). */
+export function describeTimeOff(start: Date, end: Date) {
+  const day = (d: Date) => formatSalonDate(d).replace(/^(\w{3})\w*, (\w{3})\w* (\d+), (\d{4})$/, "$1, $2 $3");
+  const t = (d: Date) => formatSalonTime(d).replace(/ E[DS]T$/, "");
+  const startsAtMidnight = salonMinuteOfDay(start) === 0;
+  const endsAtMidnight = salonMinuteOfDay(end) === 0;
+  if (startsAtMidnight && endsAtMidnight) {
+    const lastDay = new Date(end.getTime() - 60_000);
+    return salonDateKey(start) === salonDateKey(lastDay) ? `${day(start)} · all day` : `${day(start)} – ${day(lastDay)} · all day`;
+  }
+  return `${day(start)} · ${t(start)} – ${t(end)}`;
 }

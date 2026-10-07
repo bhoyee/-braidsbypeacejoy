@@ -2,7 +2,7 @@ import "server-only";
 import { randomInt, randomUUID } from "node:crypto";
 import { Prisma, type Booking, type Service } from "@prisma/client";
 import type Stripe from "stripe";
-import { findConflict } from "./availability";
+import { findConflict, findTimeOff } from "./availability";
 import { addOnsSummary, type AddOnQuote } from "./addons";
 import { CHECKOUT_HOLD_MINUTES } from "./config";
 import { formatUsPhone } from "./phone";
@@ -56,7 +56,7 @@ export async function createDepositHold(input: {
   const holdExpiresAt = new Date(Math.ceil(Date.now() / 1000 + CHECKOUT_HOLD_MINUTES * 60) * 1000);
 
   const booking = await withSchedulerLock(async (tx) => {
-    if (await findConflict(tx, input.start, end)) throw new SlotTakenError();
+    if ((await findConflict(tx, input.start, end)) || (await findTimeOff(tx, input.start, end))) throw new SlotTakenError();
     return tx.booking.create({
       data: {
         bookingCode: generateBookingCode(),

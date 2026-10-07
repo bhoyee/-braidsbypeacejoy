@@ -4,6 +4,7 @@ import type { Slot, SlotStatus } from "@/lib/availability";
 
 const REASON: Record<Exclude<SlotStatus, "available">, string> = {
   booked: "Already booked",
+  unavailable: "Not available",
   "after-hours": "Would run past 7:00 PM closing",
   past: "No longer available",
 };
@@ -35,12 +36,13 @@ export function TimeSlots({ slots, loading, error, value, onChange }: Props) {
   if (!slots) return <p className="rounded-xl bg-cream p-6 text-center text-sm text-navy-900/60">Select a date to see open times.</p>;
 
   const openCount = slots.filter((s) => s.status === "available").length;
+  const closedAllDay = slots.every((s) => s.status === "unavailable" || s.status === "past");
 
   return (
     <div className="space-y-5">
       {openCount === 0 && (
         <p className="rounded-xl bg-gold-200/50 p-4 text-sm font-medium text-navy-900">
-          This day is fully booked for the selected style. Please choose another date.
+          {closedAllDay ? "We're not taking bookings on this day. Please choose another date." : "This day is fully booked for the selected style. Please choose another date."}
         </p>
       )}
       {GROUPS.map((g) => {
@@ -65,7 +67,7 @@ export function TimeSlots({ slots, loading, error, value, onChange }: Props) {
                       selected
                         ? "bg-gold-400 text-navy-950 shadow-lg shadow-gold-500/40 ring-2 ring-gold-500"
                         : disabled
-                          ? s.status === "booked"
+                          ? s.status === "booked" || s.status === "unavailable"
                             ? "cursor-not-allowed bg-navy-900/10 text-navy-900/25 line-through"
                             : "cursor-not-allowed bg-navy-900/[0.04] text-navy-900/25"
                           : "bg-white text-royal-700 ring-1 ring-royal-700/25 hover:bg-royal-700 hover:text-white"

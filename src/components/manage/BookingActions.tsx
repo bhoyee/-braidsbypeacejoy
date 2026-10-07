@@ -268,7 +268,7 @@ export function RescheduleForm({ id, today, currentDate, currentLabel }: { id: s
                       type="button"
                       disabled={!free}
                       onClick={() => setPick(s)}
-                      title={free ? "" : s.status === "booked" ? "Another booking" : s.status === "after-hours" ? "Would finish after 7 PM" : "Already passed"}
+                      title={free ? "" : s.status === "booked" ? "Another booking" : s.status === "unavailable" ? "Your time off" : s.status === "after-hours" ? "Would finish after 7 PM" : "Already passed"}
                       className={`rounded-xl px-2 py-2 text-sm font-semibold transition ${
                         chosen
                           ? "bg-gold-400 text-navy-950 ring-2 ring-gold-500"

@@ -164,3 +164,14 @@ model EmailContact {
   retentionVisitAt DateTime? // the visit that sequence is about; a newer visit starts it again
   updatedAt        DateTime  @updatedAt
 }
+
+/// Owner time off (Manage Bookings → Time off): clients can't book inside these times.
+model TimeBlock {
+  id        String   @id @default(uuid())
+  startAt   DateTime // UTC; whole days run from salon midnight to the next midnight
+  endAt     DateTime
+  note      String? // private, e.g. "Vacation"
+  createdAt DateTime @default(now())
+
+  @@index([startAt, endAt])
+}
