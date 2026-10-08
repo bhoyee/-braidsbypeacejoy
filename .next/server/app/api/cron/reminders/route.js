@@ -1,0 +1,10 @@
+var R=require("../../../../chunks/[turbopack]_runtime.js")("server/app/api/cron/reminders/route.js")
+R.c("server/chunks/src_lib_prisma_ts_1-djp67._.js")
+R.c("server/chunks/_0eo3nel._.js")
+R.c("server/chunks/[root-of-the-server]__1fl16wv._.js")
+R.c("server/chunks/_0j_gox9._.js")
+R.c("server/chunks/[root-of-the-server]__15bjnu5._.js")
+R.c("server/chunks/node_modules_next_1zc5q0a._.js")
+R.c("server/chunks/_next-internal_server_app_api_cron_reminders_route_actions_051v7sb.js")
+R.m(9044)
+module.exports=R.m(9044).exports

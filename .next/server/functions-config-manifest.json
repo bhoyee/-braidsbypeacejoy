@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/checkout": {},
+    "/api/checkout/cancel": {},
+    "/api/checkout/status": {},
+    "/api/cron/reminders": {},
+    "/api/health": {},
+    "/api/notify/test": {},
+    "/api/pay/checkout": {},
+    "/api/unsubscribe": {},
+    "/api/webhooks/stripe": {}
+  }
+}
