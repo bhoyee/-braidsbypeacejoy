@@ -17,6 +17,7 @@ export function SignInForm({ linkInvalid }: { linkInvalid: boolean }) {
         {linkInvalid && (
           <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">That sign-in link has expired or was already used. Request a new one.</p>
         )}
+        {state && !state.ok && state.error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{state.error}</p>}
         {state?.ok ? (
           <p className="mt-6 rounded-xl bg-green-50 p-4 text-sm text-green-800">📧 {state.message}</p>
         ) : (

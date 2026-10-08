@@ -89,6 +89,12 @@ export async function signOutEverywhere() {
  * (the link goes to that same address).
  * Always resolves the same way so the form can't be used to discover the address.
  */
+/** True when the sign-in link limit (shared by everyone) is reached — safe to tell any visitor. */
+export async function loginLinksThrottled() {
+  const recent = await prisma.adminLoginToken.count({ where: { createdAt: { gt: new Date(Date.now() - 15 * 60_000) } } });
+  return recent >= MAX_LINKS_PER_15_MIN;
+}
+
 export async function requestLoginLink(email: string) {
   const owner = ownerEmails().find((e) => e === email.trim().toLowerCase());
   if (!owner || !secret()) return;

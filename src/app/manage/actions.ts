@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   consumeLoginToken,
+  loginLinksThrottled,
   endSession,
   requestLoginLink,
   requireAdmin,
@@ -31,6 +32,9 @@ export type ActionState = { ok?: boolean; message?: string; error?: string } | n
 
 export async function requestLinkAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   const email = String(form.get("email") ?? "").slice(0, 200);
+  // The limit is shared by everyone, so saying so reveals nothing about which addresses are admins.
+  if (await loginLinksThrottled())
+    return { ok: false, error: "Too many sign-in links were requested in the last 15 minutes. Please wait 15 minutes, then use the newest email you received." };
   try {
     await requestLoginLink(email);
   } catch (err) {
