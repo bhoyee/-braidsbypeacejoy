@@ -60,7 +60,11 @@ uapi_call() {
 genpw() { printf 'Bb9%s' "$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 26)"; }
 
 # .env helpers: get / set KEY="value" without ever echoing values.
-env_get() { [ -f "$ENV_FILE" ] && sed -n "s/^$1=\"\(.*\)\"$/\1/p" "$ENV_FILE" | tail -1 || true; }
+# Reads KEY=value however it was written: "quoted", 'single', or bare; ignores trailing spaces / Windows line endings.
+env_get() {
+  [ -f "$ENV_FILE" ] || return 0
+  sed -n "s/^$1=//p" "$ENV_FILE" | tail -1 | tr -d '\r' | sed -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/"
+}
 env_set() {
   local key="$1" val="$2" tmp
   tmp="$(mktemp)"
@@ -136,8 +140,10 @@ ok "Settings saved to $ENV_FILE (private to your account)"
 
 # ── 3. Mailbox for confirmation emails ──────────────────────────────────────
 bold "3/7  Email for booking confirmations"
-if [ -n "$(env_get SMTP_PASS)" ]; then
-  ok "Email sending already configured"
+# Never touch an existing mailbox password: if SMTP_PASS is in .env in any form, leave it alone.
+# (A new password is only generated on first-time setup, when there is no SMTP_PASS line at all.)
+if [ -f "$ENV_FILE" ] && grep -q '^SMTP_PASS=' "$ENV_FILE"; then
+  ok "Email sending already configured (mailbox password left unchanged)"
 else
   if uapi_call Email list_pops | jget 'd.result.data.map(x=>x.email).join("\n")' | grep -qx "$MAILBOX@$DOMAIN"; then
     note "$MAILBOX@$DOMAIN exists but its password isn't known to the site — resetting it for the website"
