@@ -90,7 +90,7 @@ export function validateStart(start: Date, durationMin: number, now = new Date()
   const { lastDay } = bookingWindow(now);
   if (start.getTime() % (SLOT_STEP_MIN * 60_000) !== 0) return "Invalid start time.";
   if (minute < OPEN_MINUTE) return "The salon opens at 8:00 AM.";
-  if (minute + durationMin > CLOSE_MINUTE) return "This style must finish by 7:00 PM — please choose an earlier time.";
+  if (minute >= CLOSE_MINUTE) return "The last start time is 6:30 PM — please choose an earlier time.";
   if (start.getTime() < now.getTime() + MIN_LEAD_MINUTES * 60_000) return "That time is too soon or in the past.";
   if (dateKey > lastDay) return "That date is beyond our booking window.";
   return null;
@@ -109,17 +109,18 @@ export async function getDaySlots(
   const now = new Date();
   const lead = opts.minLeadMinutes ?? MIN_LEAD_MINUTES;
   const dayStart = salonTimeToUtc(dateKey, OPEN_MINUTE);
-  const dayEnd = salonTimeToUtc(dateKey, CLOSE_MINUTE);
 
+  // A late start may run past closing (even past midnight), so look as far as the longest slot reaches.
+  const latestEnd = new Date(salonTimeToUtc(dateKey, CLOSE_MINUTE - SLOT_STEP_MIN).getTime() + durationMin * 60_000);
   const blocks = await prisma.timeBlock.findMany({
-    where: { startAt: { lt: dayEnd }, endAt: { gt: dayStart } },
+    where: { startAt: { lt: latestEnd }, endAt: { gt: dayStart } },
     select: { startAt: true, endAt: true },
   });
   const busy = await prisma.booking.findMany({
     where: {
       AND: [
         blockingWhere(now),
-        { appointmentAt: { lt: dayEnd } },
+        { appointmentAt: { lt: latestEnd } },
         { endAt: { gt: dayStart } },
         opts.excludeBookingId ? { id: { not: opts.excludeBookingId } } : {},
       ],
@@ -133,7 +134,6 @@ export async function getDaySlots(
     const end = new Date(start.getTime() + durationMin * 60_000);
     let status: SlotStatus = "available";
     if (start.getTime() < now.getTime() + lead * 60_000) status = "past";
-    else if (m + durationMin > CLOSE_MINUTE) status = "after-hours";
     else if (blocks.some((b) => b.startAt < end && b.endAt > start)) status = "unavailable";
     else if (busy.some((b) => b.appointmentAt < end && b.endAt > start)) status = "booked";
 

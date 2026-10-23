@@ -125,7 +125,7 @@ Implementation: `src/lib/reminders.ts`, `src/lib/followups.ts`, `src/lib/summary
 | Rule | Value | Where |
 | --- | --- | --- |
 | Deposit | $30, non-refundable | `src/lib/config.ts` |
-| Opening hours | Mon–Sun, 8:00 AM – 7:00 PM (style must finish by close) | `src/lib/config.ts` |
+| Opening hours | Mon–Sun, 8:00 AM – 7:00 PM · last start 6:30 PM (long styles may run past 7) | `src/lib/config.ts` |
 | Slot step · minimum notice · window | 30 min · 2 h · 90 days | `src/lib/config.ts` |
 | Style durations | 4 h each (Extra Small Knotless 8 h) | `src/content/styles.ts` |
 | Hair add-ons | Blended $50 / human $80 per bundle, client picks 1–8 · 2+ colour mix $20 | `src/lib/addons.ts` |

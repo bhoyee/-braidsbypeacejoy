@@ -119,6 +119,6 @@ export const FAQS: Faq[] = [
   {
     topic: "visit",
     q: "What are your opening hours?",
-    a: "Monday to Sunday, 8:00 AM to 7:00 PM, by appointment. Every style is scheduled to finish by 7:00 PM.",
+    a: "Monday to Sunday, 8:00 AM to 7:00 PM, by appointment. The last start time is 6:30 PM — longer styles that begin late may run past 7:00 PM.",
   },
 ];

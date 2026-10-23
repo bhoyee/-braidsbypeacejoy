@@ -32,7 +32,7 @@ export const CURRENCY = "usd";
 
 // Operating hours: Monday–Sunday, 8:00 AM – 7:00 PM (salon local time).
 export const OPEN_MINUTE = 8 * 60; // 08:00
-export const CLOSE_MINUTE = 19 * 60; // 19:00 — a service must FINISH by close
+export const CLOSE_MINUTE = 19 * 60; // 19:00 — last START time is 18:30; a long style may run past close
 export const SLOT_STEP_MIN = 30; // granularity of bookable start times
 
 export const MIN_LEAD_MINUTES = 120; // can't book a slot starting sooner than this

@@ -221,7 +221,7 @@ export async function rescheduleSlots(id: string, dateKey: string) {
 
 /**
  * Move a confirmed booking to a new start time. Same rules as client bookings
- * (opening hours, finish by 7 PM, no overlaps — checked under the scheduler lock),
+ * (start between 8:00 AM and 6:30 PM, no overlaps — checked under the scheduler lock),
  * except the owner may choose any future time. Reminders are re-armed for the new time.
  */
 export async function rescheduleBooking(id: string, startsAt: string, emailClient: boolean): Promise<Result> {
@@ -238,8 +238,8 @@ export async function rescheduleBooking(id: string, startsAt: string, emailClien
   const duration = before.service.durationMin;
   if (start.getTime() % (SLOT_STEP_MIN * 60_000) !== 0) return { ok: false, error: "Invalid start time." };
   if (start.getTime() <= Date.now()) return { ok: false, error: "That time has already passed." };
-  if (minute < OPEN_MINUTE || minute + duration > CLOSE_MINUTE)
-    return { ok: false, error: `${before.service.name} must start at 8:00 AM or later and finish by 7:00 PM.` };
+  if (minute < OPEN_MINUTE || minute >= CLOSE_MINUTE)
+    return { ok: false, error: "Choose a start time between 8:00 AM and 6:30 PM." };
 
   const end = new Date(start.getTime() + duration * 60_000);
   const updated = await withSchedulerLock(async (tx) => {

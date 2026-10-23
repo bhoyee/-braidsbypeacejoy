@@ -252,7 +252,7 @@ export function BookingWizard({ services, initialServiceSlug, canceledSessionId 
             <div>
               <h2 className="font-display text-3xl font-bold text-navy-900">Pick your date &amp; time</h2>
               <p className="mt-1 text-sm text-navy-900/60">
-                {service.name} · {formatDuration(service.durationMin)} — must finish by 7:00 PM
+                {service.name} · {formatDuration(service.durationMin)} — start times 8:00 AM – 6:30 PM
               </p>
             </div>
             <button type="button" onClick={() => setStep(0)} className="py-2 text-sm font-semibold text-royal-700 underline-offset-4 hover:underline">
