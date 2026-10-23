@@ -1,0 +1,3 @@
+module.exports=[38685,e=>{"use strict";function t(e){let t=e.replace(/\D/g,"");return t.length>10&&t.startsWith("1")&&(t=t.slice(1)),t.slice(0,10)}e.s(["formatUsPhone",0,function(e){let s=t(e);return 0===s.length?"":s.length<=3?`(${s}`:s.length<=6?`(${s.slice(0,3)}) ${s.slice(3)}`:`(${s.slice(0,3)}) ${s.slice(3,6)}-${s.slice(6)}`},"isValidUsPhone",0,function(e){return/^[2-9]\d{2}[2-9]\d{6}$/.test(t(e))},"usPhoneDigits",0,t])},22117,e=>{e.v(e=>Promise.resolve().then(()=>e(98043)))}];
+
+//# sourceMappingURL=src_lib_1ymihf0._.js.map
